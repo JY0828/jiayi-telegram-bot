@@ -17,8 +17,6 @@ on:
   schedule:
     # Keep the cron simple like the working monitors; the job gates on Berlin 07:00 below.
     - cron: "0 * * * *"
-    # Temporary Telegram-only schedule smoke test. Remove after confirming schedule delivery.
-    - cron: "*/5 * * * *"
 
 permissions:
   contents: write
@@ -48,18 +46,13 @@ jobs:
         run: |
           MODE="${{ inputs.mode || 'auto' }}"
           TELEGRAM_TEST="false"
-          SCHEDULE_SMOKE_TEST="false"
-          SMOKE_SCHEDULE="*/5 * * * *"
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "$SMOKE_SCHEDULE" ]; then
-            SCHEDULE_SMOKE_TEST="true"
-          fi
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            if [ "$SCHEDULE_SMOKE_TEST" != "true" ] && [ "$(TZ=Europe/Berlin date +%H)" != "07" ]; then
+            if [ "$(TZ=Europe/Berlin date +%H)" != "07" ]; then
               echo "skip=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             TODAY="$(TZ=Europe/Berlin date +%F)"
-            if [ "$SCHEDULE_SMOKE_TEST" != "true" ] && python -c 'import json, sys; from pathlib import Path; today = sys.argv[1]; path = Path("sent_history.json"); history = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []; raise SystemExit(0 if any(entry.get("date") == today for entry in history) else 1)' "$TODAY"
+            if python -c 'import json, sys; from pathlib import Path; today = sys.argv[1]; path = Path("sent_history.json"); history = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []; raise SystemExit(0 if any(entry.get("date") == today for entry in history) else 1)' "$TODAY"
             then
               echo "Already sent for $TODAY; skipping duplicate scheduled run."
               echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -68,7 +61,7 @@ jobs:
           fi
           HISTORY="sent_history.json"
           GENERATE_MODE="$MODE"
-          if [ "$MODE" = "telegram_test" ] || [ "$SCHEDULE_SMOKE_TEST" = "true" ]; then
+          if [ "$MODE" = "telegram_test" ]; then
             TELEGRAM_TEST="true"
             HISTORY="telegram-test-history.json"
             GENERATE_MODE="daily"
