@@ -17,8 +17,8 @@ on:
   schedule:
     # Keep the cron simple like the working monitors; the job gates on Berlin 07:00 below.
     - cron: "0 * * * *"
-    # One-time scheduled smoke test for 2026-06-17 12:05 Europe/Berlin.
-    - cron: "5 10 17 6 *"
+    # Temporary Telegram-only schedule smoke test. Remove after confirming schedule delivery.
+    - cron: "*/5 * * * *"
 
 permissions:
   contents: write
@@ -49,7 +49,7 @@ jobs:
           MODE="${{ inputs.mode || 'auto' }}"
           TELEGRAM_TEST="false"
           SCHEDULE_SMOKE_TEST="false"
-          SMOKE_SCHEDULE="5 10 17 6 *"
+          SMOKE_SCHEDULE="*/5 * * * *"
           if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "$SMOKE_SCHEDULE" ]; then
             SCHEDULE_SMOKE_TEST="true"
           fi
