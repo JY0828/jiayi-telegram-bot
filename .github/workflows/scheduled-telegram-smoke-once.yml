@@ -1,0 +1,55 @@
+name: Scheduled Telegram smoke once
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scheduled-telegram-smoke-once
+  cancel-in-progress: false
+
+jobs:
+  send-once:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check smoke marker
+        id: marker
+        run: |
+          if [ -f .github/scheduled-telegram-smoke.done ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Scheduled Telegram smoke already completed."
+          fi
+
+      - name: Set up Python
+        if: steps.marker.outputs.skip != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Send scheduled Telegram smoke test
+        if: steps.marker.outputs.skip != 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_MESSAGE: |
+            <b>Scheduled Telegram smoke test</b>
+
+            This is a one-time GitHub Actions schedule-triggered Telegram smoke test from jiayi-telegram-bot.
+        run: python scripts/send_telegram.py
+
+      - name: Mark smoke completed
+        if: steps.marker.outputs.skip != 'true'
+        run: |
+          date -u > .github/scheduled-telegram-smoke.done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/scheduled-telegram-smoke.done
+          git commit -m "Mark scheduled Telegram smoke completed"
+          git push
