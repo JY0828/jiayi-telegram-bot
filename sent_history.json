@@ -1,0 +1,61 @@
+[
+  {
+    "sequence": 1,
+    "date": "2026-06-15",
+    "mode": "daily",
+    "topic": "Kinderarzt",
+    "news_title": "Immer weniger Kinder - Was gute Familienpolitik leisten kann",
+    "news_link": "https://www.deutschlandfunk.de/geburtenrate-deutschland-geburtenzahlen-kinderwunsch-100.html",
+    "listening_title": "Die Nachrichten vom 15.06.2026, 10:30 Uhr",
+    "listening_link": "https://www.deutschlandfunk.de/nachrichten-35464.html",
+    "expressions": [
+      "der Allgemeinzustand",
+      "ansprechbar sein",
+      "schlapp sein",
+      "jemanden abhören",
+      "ab wann müssten wir ...?"
+    ]
+  },
+  {
+    "sequence": 2,
+    "date": "2026-06-16",
+    "mode": "daily",
+    "topic": "Kita / Eingewöhnung",
+    "news_title": "School-Nurses - Fitte Schüler lernen besser",
+    "news_link": "https://www.deutschlandfunk.de/campus-schwerpunkt-schulgesundheitskraefte-102.html",
+    "listening_title": "Tagesschau in 100 Sekunden",
+    "listening_link": "https://www.tagesschau.de/multimedia/sendung/tagesschau_in_100_sekunden/",
+    "expressions": [
+      "gut drauf sein",
+      "sich beruhigen lassen",
+      "vorsichtig verlängern",
+      "zur Ruhe kommen",
+      "sich an seinem Tempo orientieren"
+    ],
+    "vocabulary": [
+      "der Nachrichtenüberblick",
+      "die Sendung"
+    ]
+  },
+  {
+    "sequence": 3,
+    "date": "2026-06-17",
+    "mode": "daily",
+    "topic": "116117 / Facharzttermin",
+    "news_title": "Sachsen-Anhalt - Wie lassen sich Gräben vor der Landtagswahl überwinden?",
+    "news_link": "https://www.deutschlandfunk.de/sachsen-anhalt-vor-der-landtagswahl-wie-lassen-sich-graeben-ueberwinden-100.html",
+    "listening_title": "Tagesschau in 100 Sekunden",
+    "listening_link": "https://www.tagesschau.de/multimedia/sendung/tagesschau_in_100_sekunden/",
+    "expressions": [
+      "eine Abklärung",
+      "zur Hand haben",
+      "im Umkreis",
+      "zeitlich schneller gehen",
+      "verbindlich gebucht"
+    ],
+    "vocabulary": [
+      "der Nachrichtenüberblick",
+      "die Sendung"
+    ]
+  }
+]

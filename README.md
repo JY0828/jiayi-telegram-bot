@@ -1,8 +1,6 @@
 # jiayi-telegram-bot
 
-Standalone Telegram Bot service for Jiayi automations.
-
-This repository only contains the Telegram Bot. The email daily-report workflow remains in the original `automation-mailer` repository.
+Standalone Telegram Bot service and Telegram-only automation repository for Jiayi automations.
 
 ## Features
 
@@ -12,6 +10,26 @@ This repository only contains the Telegram Bot. The email daily-report workflow 
 - `/id` to show the current `TELEGRAM_CHAT_ID`
 - `/status` to check active subscriptions
 - `/stop` to disable the current chat
+- Deutsch Telegram daily push via GitHub Actions
+
+## Deutsch Telegram Automation
+
+`.github/workflows/deutsch-telegram.yml` sends the Deutsch learning push to Telegram only.
+
+Required repository secrets:
+
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
+
+Optional repository secret:
+
+- `OPENAI_API_KEY`
+
+Optional repository variable:
+
+- `OPENAI_MODEL`, default `gpt-4.1-mini`
+
+The scheduled workflow checks hourly and only sends during the 07:00 Europe/Berlin hour. It records successful daily sends in `sent_history.json` to avoid duplicates.
 
 ## Local Setup
 

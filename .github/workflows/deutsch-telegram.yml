@@ -1,0 +1,100 @@
+name: Deutsch Telegram
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Content mode"
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - daily
+          - saturday
+          - sunday
+          - telegram_test
+  schedule:
+    # Keep the cron simple like the working monitors; the job gates on Berlin 07:00 below.
+    - cron: "0 * * * *"
+    # One-time scheduled smoke test for 2026-06-17 12:05 Europe/Berlin.
+    - cron: "5 10 17 6 *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deutsch-telegram
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate Deutsch Telegram message
+        id: generate
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4.1-mini' }}
+        run: |
+          MODE="${{ inputs.mode || 'auto' }}"
+          TELEGRAM_TEST="false"
+          SCHEDULE_SMOKE_TEST="false"
+          SMOKE_SCHEDULE="5 10 17 6 *"
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "$SMOKE_SCHEDULE" ]; then
+            SCHEDULE_SMOKE_TEST="true"
+          fi
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            if [ "$SCHEDULE_SMOKE_TEST" != "true" ] && [ "$(TZ=Europe/Berlin date +%H)" != "07" ]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            TODAY="$(TZ=Europe/Berlin date +%F)"
+            if [ "$SCHEDULE_SMOKE_TEST" != "true" ] && python -c 'import json, sys; from pathlib import Path; today = sys.argv[1]; path = Path("sent_history.json"); history = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []; raise SystemExit(0 if any(entry.get("date") == today for entry in history) else 1)' "$TODAY"
+            then
+              echo "Already sent for $TODAY; skipping duplicate scheduled run."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          HISTORY="sent_history.json"
+          GENERATE_MODE="$MODE"
+          if [ "$MODE" = "telegram_test" ] || [ "$SCHEDULE_SMOKE_TEST" = "true" ]; then
+            TELEGRAM_TEST="true"
+            HISTORY="telegram-test-history.json"
+            GENERATE_MODE="daily"
+          fi
+          echo "telegram_test=$TELEGRAM_TEST" >> "$GITHUB_OUTPUT"
+          python scripts/generate_deutsch_reactivation_email.py --mode "$GENERATE_MODE" --history "$HISTORY"
+
+      - name: Send Telegram
+        id: telegram
+        if: steps.generate.outputs.skip != 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_MESSAGE_FILE: deutsch-reaktivierung-telegram.html
+          TELEGRAM_ERROR_LOG: telegram-error.log
+        run: python scripts/send_telegram.py
+
+      - name: Commit sent history
+        if: steps.generate.outputs.skip != 'true' && steps.generate.outputs.telegram_test != 'true'
+        run: |
+          if [ -z "$(git status --porcelain -- sent_history.json)" ]; then
+            echo "No sent history changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sent_history.json
+          git commit -m "Update Deutsch Telegram sent history"
+          git push
