@@ -1,0 +1,45 @@
+name: Show Telegram chat id
+
+on:
+  workflow_dispatch:
+
+jobs:
+  show-chat-id:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Show recent Telegram chats
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.request
+
+          token = os.getenv("TELEGRAM_BOT_TOKEN")
+          if not token:
+              raise SystemExit("Missing TELEGRAM_BOT_TOKEN repository secret.")
+
+          url = f"https://api.telegram.org/bot{token}/getUpdates"
+          with urllib.request.urlopen(url, timeout=30) as response:
+              data = json.loads(response.read().decode("utf-8"))
+
+          if not data.get("ok"):
+              raise SystemExit(f"Telegram API returned non-ok response: {data}")
+
+          seen = set()
+          for update in data.get("result", []):
+              message = update.get("message") or update.get("channel_post") or {}
+              chat = message.get("chat") or {}
+              chat_id = chat.get("id")
+              if chat_id is None or chat_id in seen:
+                  continue
+              seen.add(chat_id)
+              label = chat.get("title") or chat.get("username") or "private chat"
+              print(f"TELEGRAM_CHAT_ID={chat_id}  type={chat.get('type')}  label={label}")
+
+          if not seen:
+              print("No recent chats found. Send /start or any message to the bot, then run this workflow again.")
+          PY
