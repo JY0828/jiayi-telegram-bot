@@ -15,8 +15,8 @@ on:
           - sunday
           - telegram_test
   schedule:
-    # Keep the cron simple like the working monitors; the job gates on Berlin 07:00 below.
-    - cron: "0 * * * *"
+    # Avoid the top-of-hour Actions rush. The job gates on the Berlin 07:00-08:59 window below.
+    - cron: "17,32,47 * * * *"
 
 permissions:
   contents: write
@@ -47,7 +47,8 @@ jobs:
           MODE="${{ inputs.mode || 'auto' }}"
           TELEGRAM_TEST="false"
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            if [ "$(TZ=Europe/Berlin date +%H)" != "07" ]; then
+            BERLIN_HOUR="$(TZ=Europe/Berlin date +%H)"
+            if [ "$BERLIN_HOUR" != "07" ] && [ "$BERLIN_HOUR" != "08" ]; then
               echo "skip=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi

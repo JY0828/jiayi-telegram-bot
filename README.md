@@ -29,7 +29,7 @@ Optional repository variable:
 
 - `OPENAI_MODEL`, default `gpt-4.1-mini`
 
-The scheduled workflow checks hourly and only sends during the 07:00 Europe/Berlin hour. It records successful daily sends in `sent_history.json` to avoid duplicates.
+The scheduled workflow uses several non-top-of-hour attempts during the 07:00-08:59 Europe/Berlin window. It records successful daily sends in `sent_history.json` to avoid duplicates, so at most one Telegram push is sent per day.
 
 ## Local Setup
 
