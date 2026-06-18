@@ -57,5 +57,27 @@
       "der Nachrichtenüberblick",
       "die Sendung"
     ]
+  },
+  {
+    "sequence": 4,
+    "date": "2026-06-18",
+    "mode": "daily",
+    "topic": "Bürgeramt",
+    "news_title": "Hitze in Deutschland: Regeln am Arbeitsplatz und in der Schule",
+    "news_link": "https://www.tagesschau.de/wirtschaft/verbraucher/faq-hitze-rechte-100.html",
+    "listening_title": "Tagesschau in 100 Sekunden",
+    "listening_link": "https://www.tagesschau.de/multimedia/sendung/tagesschau_in_100_sekunden/",
+    "expressions": [
+      "die Unterlagen",
+      "vollständig sein",
+      "nicht nötig sein",
+      "gleich ausdrucken",
+      "etwas beachten müssen"
+    ],
+    "vocabulary": [
+      "der Nachrichtenüberblick",
+      "die Sendung",
+      "zuständig"
+    ]
   }
 ]
