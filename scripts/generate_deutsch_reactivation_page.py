@@ -18,6 +18,8 @@ import generate_deutsch_reactivation_email as base
 
 
 DEFAULT_PAGE_BASE = "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs"
+DW_SLOW_NEWS_URL = "https://learngerman.dw.com/de/langsam-gesprochene-nachrichten/s-60040332"
+NACHRICHTENLEICHT_FEED = "https://www.deutschlandfunk.de/podcast-nachrichtenleicht-der-wochenrueckblick-in-einfacher-sprache-100.xml"
 
 
 class ParagraphExtractor(HTMLParser):
@@ -87,6 +89,152 @@ def fetch_raw(url: str) -> tuple[str, str | None]:
         return base.fetch_text(url, timeout=25), None
     except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
         return "", str(exc)
+
+
+def absolute_url(url: str, base_url: str) -> str:
+    if url.startswith("http"):
+        return url
+    if url.startswith("/"):
+        if "learngerman.dw.com" in base_url:
+            return "https://learngerman.dw.com" + url
+        return "https://www.deutschlandfunk.de" + url
+    return url
+
+
+def apollo_state(raw: str) -> dict:
+    match = re.search(r"window\.__APOLLO_STATE__\s*=\s*(\{.*?\});", raw, re.S)
+    if not match:
+        return {}
+    return json.loads(match.group(1))
+
+
+def html_to_paragraphs(fragment: str) -> list[str]:
+    parser = ParagraphExtractor()
+    parser.feed(fragment)
+    paragraphs = []
+    for text in parser.paragraphs:
+        text = base.clean_text(text)
+        if text and text not in paragraphs:
+            paragraphs.append(text)
+    return paragraphs
+
+
+def html_to_sections(fragment: str) -> list[dict]:
+    parts = re.split(r"(?is)<h2[^>]*>(.*?)</h2>", fragment)
+    sections: list[dict] = []
+    if parts and base.clean_text(re.sub(r"<[^>]+>", " ", parts[0])):
+        sections.append({"heading": "", "paragraphs": html_to_paragraphs(parts[0])})
+    for i in range(1, len(parts), 2):
+        heading = base.clean_text(re.sub(r"<[^>]+>", " ", parts[i]))
+        body = parts[i + 1] if i + 1 < len(parts) else ""
+        paragraphs = html_to_paragraphs(body)
+        if heading or paragraphs:
+            sections.append({"heading": heading, "paragraphs": paragraphs})
+    return [s for s in sections if s["heading"] or s["paragraphs"]]
+
+
+def article_text_length(sections: list[dict]) -> int:
+    return sum(len(p) for section in sections for p in section["paragraphs"])
+
+
+def quality_ok(sections: list[dict], minimum_chars: int) -> bool:
+    text = " ".join(p for section in sections for p in section["paragraphs"]).casefold()
+    if len(text) < minimum_chars:
+        return False
+    bad = sum(text.count(word) for word in ("beschreibung", "description", "overview", "zusammenfassung", "abstract"))
+    return bad <= 2
+
+
+def dw_article_from_url(url: str) -> dict | None:
+    raw, error = fetch_raw(url)
+    if error:
+        return None
+    state = apollo_state(raw)
+    articles = [v for v in state.values() if isinstance(v, dict) and v.get("__typename") == "Article"]
+    article = max(articles, key=lambda item: len(item.get("text") or ""), default=None)
+    if not article or not article.get("text"):
+        return None
+    sections = html_to_sections(article["text"])
+    mp3 = ""
+    for value in state.values():
+        if isinstance(value, dict) and value.get("__typename") == "Audio" and value.get("mp3Src"):
+            mp3 = value["mp3Src"]
+            break
+    return {
+        "source": "DW Learn German",
+        "title": article.get("name") or article.get("shortTitle") or "DW Learn German",
+        "url": absolute_url(article.get("namedUrl") or url, "https://learngerman.dw.com"),
+        "sections": sections,
+        "audio_url": mp3,
+    }
+
+
+def dw_slow_news_candidates(limit: int = 12) -> list[str]:
+    raw, error = fetch_raw(DW_SLOW_NEWS_URL)
+    if error:
+        return []
+    urls: list[str] = []
+    for match in re.finditer(r'href="([^"]+/de/[^"]+langsam-gesprochene-nachrichten/a-\d+)"', raw):
+        url = absolute_url(match.group(1), DW_SLOW_NEWS_URL)
+        if url not in urls:
+            urls.append(url)
+    for match in re.finditer(r'href="(/de/[^"]+langsam-gesprochene-nachrichten/a-\d+)"', raw):
+        url = absolute_url(match.group(1), DW_SLOW_NEWS_URL)
+        if url not in urls:
+            urls.append(url)
+    return urls[:limit]
+
+
+def choose_dw_slow_news(minimum_chars: int, require_audio: bool, skip_url: str | None = None) -> dict:
+    for url in dw_slow_news_candidates():
+        if skip_url and url == skip_url:
+            continue
+        article = dw_article_from_url(url)
+        if not article:
+            continue
+        if require_audio and not article["audio_url"]:
+            continue
+        if quality_ok(article["sections"], minimum_chars):
+            return article
+    raise RuntimeError("No complete DW slow-news article passed quality checks.")
+
+
+def nachrichtenleicht_candidates(limit: int = 8) -> list[str]:
+    try:
+        import xml.etree.ElementTree as ET
+
+        raw = base.fetch_text(NACHRICHTENLEICHT_FEED)
+        root = ET.fromstring(raw)
+    except Exception:
+        return []
+    urls = []
+    for item in root.findall(".//item")[:limit]:
+        link = item.findtext("link") or ""
+        if link and link not in urls:
+            urls.append(link)
+    return urls
+
+
+def deutschlandfunk_teaser_article(url: str) -> dict | None:
+    raw, error = fetch_raw(url)
+    if error:
+        return None
+    parser = ParagraphExtractor()
+    parser.feed(raw)
+    paragraphs = [p for p in parser.paragraphs if "Nachrichtenleicht" not in p and "Podcast" not in p]
+    paragraphs = [p for p in paragraphs if len(p) > 80]
+    if len(paragraphs) < 4:
+        return None
+    sections = [{"heading": "Nachrichtenleicht", "paragraphs": paragraphs[:10]}]
+    return {"source": "Nachrichtenleicht", "title": paragraphs[0][:80], "url": url, "sections": sections, "audio_url": ""}
+
+
+def choose_reading_article(skip_url: str | None = None) -> dict:
+    # Nachrichtenleicht is intentionally probed but not accepted here yet: the current
+    # pages often mix teaser text with Deutschlandfunk navigation/topic blocks. That is
+    # worse than switching sources, so use the full-text DW fallback.
+    _ = nachrichtenleicht_candidates()
+    return choose_dw_slow_news(500, require_audio=False, skip_url=skip_url)
 
 
 def extract_escaped_field(raw: str, field: str) -> str:
@@ -229,10 +377,48 @@ def translate_paragraphs(paragraphs: list[str]) -> tuple[list[str], str | None]:
     return [str(item).strip() for item in translated], None
 
 
+def translate_required(paragraphs: list[str], label: str) -> list[str]:
+    translated, error = translate_paragraphs(paragraphs)
+    if error or not translated:
+        raise RuntimeError(f"{label} translation failed: {error or 'empty translation'}")
+    return translated
+
+
+def flatten_sections(sections: list[dict]) -> list[str]:
+    paragraphs: list[str] = []
+    for section in sections:
+        if section.get("heading"):
+            paragraphs.append(section["heading"])
+        paragraphs.extend(section.get("paragraphs", []))
+    return paragraphs
+
+
+def sections_html(sections: list[dict]) -> str:
+    chunks = []
+    for section in sections:
+        if section.get("heading"):
+            chunks.append(f"<h3>{h(section['heading'])}</h3>")
+        for paragraph in section.get("paragraphs", []):
+            chunks.append(f"<p>{h(paragraph)}</p>")
+    return "".join(chunks)
+
+
+def translated_html(original: list[str], translated: list[str]) -> str:
+    chunks = []
+    for source, zh in zip(original, translated):
+        if len(source) < 95 and not source.endswith("."):
+            chunks.append(f"<h3>{h(zh)}</h3>")
+        else:
+            chunks.append(f"<p>{h(zh)}</p>")
+    return "".join(chunks)
+
+
 def sentence_rows_from_paragraphs(paragraphs: list[str], limit: int = 12) -> list[dict]:
     text = " ".join(paragraphs)
     sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if len(s.split()) >= 5]
-    return [{"de": s, "cn": "逐句内容仅在获取到完整字幕/正文时生成。"} for s in sentences[:limit]]
+    picked = sentences[:limit]
+    translations = translate_required(picked, "key sentence")
+    return [{"de": s, "cn": cn} for s, cn in zip(picked, translations)]
 
 
 def dynamic_vocab(helpers: list[dict], paragraphs: list[str]) -> list[dict]:
@@ -240,6 +426,11 @@ def dynamic_vocab(helpers: list[dict], paragraphs: list[str]) -> list[dict]:
     limit = 10 if words < 350 else 15 if words < 900 else 20
     minimum = 8 if words < 350 else 10 if words < 900 else 15
     return base.expanded_vocabulary_rows(helpers, minimum=minimum, limit=limit)
+
+
+def vocab_from_text(text: str, limit: int) -> list[dict]:
+    helpers = [item for item in base.VOCAB_CANDIDATES if base.matches_helper(item, text.casefold())]
+    return dynamic_vocab(helpers, [text])[:limit]
 
 
 def page_link_for(date: str, page_base: str) -> str:
@@ -299,23 +490,30 @@ def build_page(title: str, body: str) -> str:
 def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_base: str) -> tuple[str, str, str, str, dict, Path]:
     weekend = mode == "saturday"
     scenario = base.choose_scenario(history, weekend=weekend)
-    news = base.choose_item(base.NEWS_FEEDS, history, base.fallback_news())
-    listening = base.choose_item(base.LISTENING_FEEDS, history, base.fallback_listening())
     date = today.isoformat()
     subject = f"🇩🇪 今日德语 #{sequence:03d} - {date}"
     page_url = page_link_for(date, page_base)
 
-    news_paragraphs, news_error = extract_article_paragraphs(news.link, news)
-    news_is_full_article = bool(news_paragraphs) and not news_error
-    news_translations, translation_error = translate_paragraphs(news_paragraphs) if news_is_full_article else ([], None)
-    listening_paragraphs, listening_error = extract_article_paragraphs(listening.link, listening)
+    listening = choose_dw_slow_news(300, require_audio=True)
+    reading = choose_reading_article(skip_url=listening["url"])
+    listening_flat = flatten_sections(listening["sections"])
+    reading_flat = flatten_sections(reading["sections"])
+    if sum(len(p) for p in listening_flat) < 300:
+        raise RuntimeError("Listening text failed quality check.")
+    if sum(len(p) for p in reading_flat) < 500:
+        raise RuntimeError("Reading text failed quality check.")
+    listening_translation = translate_required(listening_flat, "listening")
+    reading_translation = translate_required(reading_flat, "reading")
 
-    helpers, video_helpers = base.reading_helpers(news, listening)
     expressions = base.expression_rows(scenario["expressions"])
     scenario_expr = base.expression_detail_rows(expressions, scenario)
-    news_vocab = dynamic_vocab(helpers, news_paragraphs)
-    news_expr = base.news_expression_rows()
-    takeaways = base.takeaways(scenario_expr, news_vocab)
+    listening_text = " ".join(listening_flat)
+    reading_text = " ".join(reading_flat)
+    listening_vocab = vocab_from_text(listening_text, 5)
+    reading_vocab = vocab_from_text(reading_text, 5)
+    listening_expr = base.news_expression_rows()[:3]
+    reading_expr = base.news_expression_rows()
+    takeaways = base.takeaways(scenario_expr, reading_vocab)
 
     dialogue = base.dialogue_text(scenario["dialogue"])
     reusable = base.reusable_sentence_rows(scenario)
@@ -328,28 +526,13 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
         for item in takeaways
     )
 
-    if listening_paragraphs:
-        listening_intro = "本模块基于已抓取到的视频/音频页面文本。若页面文本不是逐字字幕，只作为听前导读使用。"
-        listening_keys = sentence_rows_from_paragraphs(listening_paragraphs, 12)
-        listening_key_html = "".join(
-            f"<div class='item'><b>德语：</b> {h(row['de'])}<br><b>中文：</b> {h(row['cn'])}</div>"
-            for row in listening_keys
-        )
-    else:
-        listening_intro = f"未能获取完整字幕，因此本模块只基于页面文本和标题，不生成伪造逐句内容。失败原因：{listening_error or '页面未提供可提取的字幕或正文段落。'}"
-        listening_key_html = "<p class='muted'>未生成关键句，避免编造视频原文。</p>"
-
-    if news_paragraphs:
-        original_html = "".join(f"<p>{h(p)}</p>" for p in news_paragraphs)
-        if news_translations:
-            translation_html = "".join(f"<p>{h(p)}</p>" for p in news_translations)
-        elif not news_is_full_article:
-            translation_html = f"<p class='muted'>正文抓取失败，本次只提供标题和简介，不提供全文翻译。失败原因：{h(news_error or '未抓到完整正文。')}</p>"
-        else:
-            translation_html = f"<p class='muted'>已抓取正文，但未生成全文翻译。原因：{h(translation_error or '未知错误')}</p>"
-    else:
-        original_html = f"<p class='muted'>正文抓取失败，本次只提供标题和简介，不提供全文翻译。失败原因：{h(news_error or '未知错误')}</p>"
-        translation_html = "<p class='muted'>正文抓取失败，本次不提供全文翻译。</p>"
+    listening_keys = sentence_rows_from_paragraphs(listening_flat, 12)
+    listening_key_html = "".join(
+        f"<div class='item'><b>德语：</b> {h(row['de'])}<br><b>中文：</b> {h(row['cn'])}</div>"
+        for row in listening_keys
+    )
+    listening_translation_html = translated_html(listening_flat, listening_translation)
+    reading_translation_html = translated_html(reading_flat, reading_translation)
 
     page_body = f"""
 <header>
@@ -367,23 +550,25 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
 </section>
 <section>
   <h2>2. 今日听力</h2>
-  <p><b>{h(listening.title)}</b></p>
-  <p><a href="{h(listening.link)}">{h(listening.link)}</a></p>
-  <div class="zh">{h(listening_intro)}</div>
-  {details("视频内容中文导读", f"<p>{h(base.listening_guide(listening, ' '.join(listening_paragraphs)))}</p>", True)}
-  {details("视频关键句", listening_key_html, False)}
-  {details("高频表达", vocab_blocks(base.vocabulary_rows(video_helpers or helpers[:5], 8)), False)}
-  {details("听力难度说明", "<p>B1-B2。短内容适合恢复听力反应；如果页面没有字幕，重点放在标题、页面导读和听懂大意。</p>", True)}
+  <p><b>{h(listening['title'])}</b></p>
+  <p>音频链接：<a href="{h(listening['audio_url'])}">{h(listening['audio_url'])}</a></p>
+  <p>正文来源：<a href="{h(listening['url'])}">{h(listening['url'])}</a></p>
+  {details("完整德语正文", sections_html(listening["sections"]), True)}
+  {details("逐段中文翻译", f"<div class='zh'>{listening_translation_html}</div>", True)}
+  {details("关键句 8-12 句", listening_key_html, False)}
+  {details("高频词汇（5个）", vocab_blocks(listening_vocab), False)}
+  {details("重点表达（3个）", expr_blocks(listening_expr), False)}
+  {details("听力难度说明", "<p>B1-B2。DW Langsam Gesprochene Nachrichten 语速较慢、发音清楚，但新闻词汇、被动句和长名词结构仍需要适应。</p>", True)}
 </section>
 <section>
-  <h2>3. 今日德国新闻</h2>
-  <p><b>{h(news.title)}</b></p>
-  <p><a href="{h(news.link)}">{h(news.link)}</a></p>
-  <p>{h(base.cn_summary(news))}</p>
-  {details("原文正文", original_html, False)}
-  {details("全文中文翻译", f"<div class='zh'>{translation_html}</div>", True)}
-  {details("重点词汇", vocab_blocks(news_vocab), False)}
-  {details("高频表达", expr_blocks(news_expr), False)}
+  <h2>3. 今日阅读</h2>
+  <p><b>{h(reading['title'])}</b></p>
+  <p><a href="{h(reading['url'])}">{h(reading['url'])}</a></p>
+  {details("完整德语正文", sections_html(reading["sections"]), True)}
+  {details("逐段中文翻译", f"<div class='zh'>{reading_translation_html}</div>", True)}
+  {details("重点词汇（5个）", vocab_blocks(reading_vocab), False)}
+  {details("重点表达（5个）", expr_blocks(reading_expr), False)}
+  {details("德国生活背景解释", "<p>这类材料适合恢复德国公共生活阅读能力：先抓机构、动作和影响，再看原因与后果。遇到政策、医疗、教育和行政词时，优先理解它在德国生活中的实际作用。</p>", True)}
 </section>
 """
     page_html = build_page(subject, page_body)
@@ -398,10 +583,10 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
 {scenario["intro"]}
 
 今日听力：
-{listening.title}
+{listening['title']}
 
-今日新闻：
-{news.title}
+今日阅读：
+{reading['title']}
 
 今日只记住这 3 个：
 {takeaways_text}
@@ -415,8 +600,8 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
 <header><h1>{h(subject)}</h1><p>完整学习页入口</p></header>
 <section>
   <h2>今日主题</h2><p>{h(scenario["intro"])}</p>
-  <h2>今日听力</h2><p>{h(listening.title)}</p>
-  <h2>今日新闻</h2><p>{h(news.title)}</p>
+  <h2>今日听力</h2><p>{h(listening['title'])}</p>
+  <h2>今日阅读</h2><p>{h(reading['title'])}</p>
   <h2>今日只记住这 3 个</h2><pre>{h(takeaways_text)}</pre>
   <p><a href="{h(page_url)}">打开今日完整学习页</a></p>
 </section>
@@ -428,10 +613,10 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
 {tg(scenario["intro"])}
 
 <b>今日听力：</b>
-{tg(listening.title)}
+{tg(listening['title'])}
 
-<b>今日新闻：</b>
-{tg(news.title)}
+<b>今日阅读：</b>
+{tg(reading['title'])}
 
 <b>今日只记住这 3 个：</b>
 {tg(takeaways_text)}
@@ -444,10 +629,10 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
         "date": date,
         "mode": mode,
         "topic": scenario["topic"],
-        "news_title": news.title,
-        "news_link": news.link,
-        "listening_title": listening.title,
-        "listening_link": listening.link,
+        "news_title": reading["title"],
+        "news_link": reading["url"],
+        "listening_title": listening["title"],
+        "listening_link": listening["url"],
         "page_url": page_url,
         "page_path": str(page_path),
         "expressions": [item["expr"] for item in takeaways],
