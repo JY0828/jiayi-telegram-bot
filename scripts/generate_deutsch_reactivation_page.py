@@ -325,7 +325,7 @@ def translate_paragraphs(paragraphs: list[str]) -> tuple[list[str], str | None]:
     if not paragraphs:
         return [], "没有可翻译的正文段落。"
     if not api_key:
-        return [], "未配置 OPENAI_API_KEY，无法生成逐段中文翻译。"
+        return translate_paragraphs_public(paragraphs)
     model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
     prompt = (
         "请把下面德语新闻正文逐段翻译成自然中文。要求保留段落顺序，不总结，不扩写。"
@@ -356,8 +356,8 @@ def translate_paragraphs(paragraphs: list[str]) -> tuple[list[str], str | None]:
     try:
         with urllib.request.urlopen(request, timeout=60) as response:
             data = json.loads(response.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError) as exc:
-        return [], f"翻译请求失败：{exc}"
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError):
+        return translate_paragraphs_public(paragraphs)
     text = data.get("output_text", "")
     if not text:
         chunks: list[str] = []
@@ -373,8 +373,39 @@ def translate_paragraphs(paragraphs: list[str]) -> tuple[list[str], str | None]:
     except json.JSONDecodeError:
         translated = [line.strip() for line in text.splitlines() if line.strip()]
     if not isinstance(translated, list) or len(translated) != len(paragraphs):
-        return [], "翻译结果格式不稳定，因此不展示可能错位的全文翻译。"
+        return translate_paragraphs_public(paragraphs)
     return [str(item).strip() for item in translated], None
+
+
+def translate_one_public(text: str) -> str:
+    query = urllib.parse.urlencode(
+        {
+            "client": "gtx",
+            "sl": "de",
+            "tl": "zh-CN",
+            "dt": "t",
+            "q": text,
+        }
+    )
+    request = urllib.request.Request(
+        f"https://translate.googleapis.com/translate_a/single?{query}",
+        headers={"User-Agent": "Mozilla/5.0"},
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        data = json.loads(response.read().decode("utf-8"))
+    return "".join(part[0] for part in data[0] if part and part[0]).strip()
+
+
+def translate_paragraphs_public(paragraphs: list[str]) -> tuple[list[str], str | None]:
+    translated: list[str] = []
+    try:
+        for paragraph in paragraphs:
+            translated.append(translate_one_public(paragraph))
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError, IndexError, TypeError) as exc:
+        return [], f"public translation fallback failed: {exc}"
+    if len(translated) != len(paragraphs) or any(not item for item in translated):
+        return [], "public translation fallback returned incomplete output"
+    return translated, None
 
 
 def translate_required(paragraphs: list[str], label: str) -> list[str]:
@@ -431,6 +462,31 @@ def dynamic_vocab(helpers: list[dict], paragraphs: list[str]) -> list[dict]:
 def vocab_from_text(text: str, limit: int) -> list[dict]:
     helpers = [item for item in base.VOCAB_CANDIDATES if base.matches_helper(item, text.casefold())]
     return dynamic_vocab(helpers, [text])[:limit]
+
+
+def unique_takeaways(primary: list[dict], extras: list[dict], limit: int = 3) -> list[dict]:
+    rows: list[dict] = []
+    seen: set[str] = set()
+    for item in [*primary, *extras]:
+        expr = str(item.get("expr") or item.get("word") or "").strip()
+        if not expr:
+            continue
+        key = re.sub(r"^(der|die|das|ein|eine)\s+", "", expr.casefold()).strip()
+        key = re.sub(r"\W+", "", key)
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append(
+            {
+                "expr": expr,
+                "cn": item.get("cn", item.get("meaning", "")),
+                "example": item.get("example", ""),
+                "translation": item.get("translation", ""),
+            }
+        )
+        if len(rows) >= limit:
+            return rows
+    return rows
 
 
 def page_link_for(date: str, page_base: str) -> str:
@@ -513,7 +569,7 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
     reading_vocab = vocab_from_text(reading_text, 5)
     listening_expr = base.news_expression_rows()[:3]
     reading_expr = base.news_expression_rows()
-    takeaways = base.takeaways(scenario_expr, reading_vocab)
+    takeaways = unique_takeaways(base.takeaways(scenario_expr, reading_vocab), [*listening_vocab, *reading_vocab])
 
     dialogue = base.dialogue_text(scenario["dialogue"])
     reusable = base.reusable_sentence_rows(scenario)
