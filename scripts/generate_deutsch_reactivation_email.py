@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Deutsch Reaktivierung v3 content for Email and Telegram."""
+"""Generate Deutsch Reaktivierung v4 content for Email and Telegram."""
 
 from __future__ import annotations
 
@@ -337,7 +337,7 @@ def clean_text(value: str) -> str:
 
 
 def fetch_text(url: str, timeout: int = 20) -> str:
-    request = urllib.request.Request(url, headers={"User-Agent": "automation-mailer Deutsch Reaktivierung v3"})
+    request = urllib.request.Request(url, headers={"User-Agent": "automation-mailer Deutsch Reaktivierung v4"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         raw = response.read()
         charset = response.headers.get_content_charset() or "utf-8"
@@ -602,6 +602,203 @@ def helper_list_text(helpers: list[dict]) -> str:
     return "\n".join(f"{helper_label(item['word'])} → {item['cn']}" for item in helpers[:5])
 
 
+def page_excerpt(item: MediaItem, page_text: str, max_words: int = 220) -> str:
+    cleaned_page = clean_text(page_text)
+    nav_markers = (
+        "Hauptnavigation",
+        "Nebennavigation",
+        "Untermenü",
+        "Pfeil rechts",
+        "Close menu",
+        "Fußzeile",
+    )
+    page_is_navigation_heavy = sum(marker in cleaned_page for marker in nav_markers) >= 2
+    if page_is_navigation_heavy:
+        cleaned_page = ""
+    source = clean_text(item.summary) or cleaned_page or item.title
+    words = source.split()
+    return " ".join(words[:max_words])
+
+
+def listening_intro(item: MediaItem, page_text: str) -> str:
+    source = page_excerpt(item, page_text, 80)
+    return (
+        f"今天听 {item.source} 的《{item.title}》。它适合早上短时间恢复德语耳朵：信息密度不高、"
+        "播音相对清楚，重点不是逐词听懂，而是抓住主题、人物和转折。难点主要在新闻语速、"
+        "名词化表达，以及短时间内连续出现的机构名或政策词。"
+        + (f" 页面内容线索：{source}" if source and source != item.title else "")
+    )
+
+
+def listening_guide(item: MediaItem, page_text: str) -> str:
+    source = page_excerpt(item, page_text, 120)
+    if source:
+        return f"先带着一个问题听：这段内容到底在说哪件事，以及它对普通人在德国生活有什么影响？页面文本的核心线索是：{source}"
+    return "先带着一个问题听：这段内容到底在说哪件事，以及它对普通人在德国生活有什么影响？听第一遍只抓主题，第二遍再抓关键词。"
+
+
+def news_translation(item: MediaItem, page_text: str) -> str:
+    source = page_excerpt(item, page_text, 180)
+    if source:
+        return (
+            "这篇内容的主线可以这样理解：\n\n"
+            f"{source}\n\n"
+            "阅读时重点看三层：第一，发生了什么变化；第二，哪些人或机构受到影响；第三，这件事和德国日常生活、医疗、家庭、行政或工作有什么关系。"
+        )
+    return (
+        f"这条新闻来自 {item.source}。当前页面正文抓取不完整，因此今天只做低负担阅读：先看标题《{item.title}》，"
+        "再打开原文确认细节。重点仍然是弄清发生了什么、影响谁、和德国日常生活有什么关系。"
+    )
+
+
+def vocabulary_rows(helpers: list[dict], limit: int = 12) -> list[dict]:
+    rows = []
+    for item in helpers[:limit]:
+        rows.append(
+            {
+                "word": helper_label(item["word"]),
+                "pos": "Nomen/Verb/Adjektiv",
+                "cn": item["cn"],
+                "context": item["cn"],
+                "frequency": "⭐⭐⭐ 高频",
+                "example": item.get("example", ""),
+            }
+        )
+    return rows
+
+
+def expanded_vocabulary_rows(helpers: list[dict], minimum: int = 8, limit: int = 12) -> list[dict]:
+    rows = vocabulary_rows(helpers, limit)
+    seen = {row["word"].casefold() for row in rows}
+    for item in VOCAB_CANDIDATES:
+        label = helper_label(item["word"])
+        if label.casefold() in seen:
+            continue
+        rows.append(
+            {
+                "word": label,
+                "pos": "Nomen/Verb/Adjektiv",
+                "cn": item["cn"],
+                "context": item["cn"],
+                "frequency": "⭐⭐⭐ 高频",
+                "example": item.get("example", ""),
+            }
+        )
+        seen.add(label.casefold())
+        if len(rows) >= minimum:
+            break
+    return rows[:limit]
+
+
+def news_expression_rows() -> list[dict]:
+    return [
+        {
+            "de": "in Betracht kommen",
+            "cn": "被考虑、有可能",
+            "scene": "新闻、政策、保险、医疗方案讨论",
+            "example": "Für Familien können mehrere Unterstützungsangebote in Betracht kommen.",
+            "translation": "对家庭来说，可能会考虑多种支持措施。",
+        },
+        {
+            "de": "Maßnahmen ergreifen",
+            "cn": "采取措施",
+            "scene": "政府、学校、医院、公司正式沟通",
+            "example": "Die Behörden wollen zusätzliche Maßnahmen ergreifen.",
+            "translation": "有关部门计划采取额外措施。",
+        },
+        {
+            "de": "Anspruch auf etwas haben",
+            "cn": "有权获得某项福利/服务",
+            "scene": "Krankenkasse、Elterngeld、Kindergeld、保险",
+            "example": "Eltern können Anspruch auf bestimmte Leistungen haben.",
+            "translation": "父母可能有权获得某些福利。",
+        },
+        {
+            "de": "zur Verfügung stellen",
+            "cn": "提供、可供使用",
+            "scene": "行政通知、学校资源、医疗服务",
+            "example": "Die Schule stellt zusätzliche Beratung zur Verfügung.",
+            "translation": "学校提供额外咨询。",
+        },
+        {
+            "de": "eine Rolle spielen",
+            "cn": "起作用、有影响",
+            "scene": "解释原因、分析影响",
+            "example": "Auch die finanzielle Situation spielt eine wichtige Rolle.",
+            "translation": "经济状况也起着重要作用。",
+        },
+    ]
+
+
+def reusable_sentence_rows(scenario: dict) -> list[dict]:
+    rows = []
+    for line in scenario["sentences"][:8]:
+        rows.append(
+            {
+                "de": line,
+                "cn": "这句可以直接替换时间、对象或机构后使用。",
+                "scene": "Kinderarzt、Kita、保险公司、Bürgeramt、电话预约或邮件沟通",
+            }
+        )
+    return rows
+
+
+def expression_detail_rows(expressions: list[dict], scenario: dict) -> list[dict]:
+    rows = []
+    for item in expressions[:8]:
+        label = helper_label(item["de"]).split()[0].casefold()
+        example = ""
+        for _speaker, line in scenario.get("dialogue", []):
+            if label and label in line.casefold():
+                example = line
+                break
+        if not example:
+            example = scenario["sentences"][0] if scenario.get("sentences") else "Könnten Sie mir bitte kurz Bescheid geben?"
+        rows.append(
+            {
+                "de": item["de"],
+                "cn": item["cn"],
+                "scene": item["scene"],
+                "example": example,
+                "translation": "这句在德国生活沟通里可以直接作为模板使用。",
+            }
+        )
+    return rows
+
+
+def key_sentence_rows(text: str, fallback_title: str, limit: int = 6) -> list[dict]:
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if len(s.split()) >= 4]
+    if not sentences:
+        sentences = [fallback_title]
+    rows = []
+    for sentence in sentences[:limit]:
+        rows.append({"de": sentence, "cn": "听这一句时重点抓主语、动词和结论。"})
+    return rows
+
+
+def takeaways(expressions: list[dict], vocab: list[dict]) -> list[dict]:
+    picked: list[dict] = []
+    for item in expressions[:2]:
+        picked.append(
+            {
+                "expr": item["de"],
+                "cn": item["cn"],
+                "example": item.get("example", "Könnten Sie mir bitte kurz Bescheid geben?"),
+                "translation": item.get("translation", "这句今天可以直接拿去用。"),
+            }
+        )
+    for item in vocab[:1]:
+        picked.append(
+            {
+                "expr": item["word"],
+                "cn": item["cn"],
+                "example": item.get("example", ""),
+                "translation": "看到这个词时先理解场景含义，不需要背。",
+            }
+        )
+    return picked[:3]
+
+
 def build_daily(sequence: int, today: dt.date, history: list[dict], mode: str) -> tuple[str, str, str, str, dict]:
     weekend = mode == "saturday"
     scenario = choose_scenario(history, weekend=weekend)
@@ -612,10 +809,12 @@ def build_daily(sequence: int, today: dt.date, history: list[dict], mode: str) -
         fallback_listening(),
     )
     subject = f"🇩🇪 今日德语 #{sequence:03d} - {today.isoformat()}"
-    de_summary = short_de_summary(news, 80)
+    news_page = fetch_page_content(news.link)
+    listening_page = fetch_page_content(listening.link)
+    de_summary = short_de_summary(news, 100)
     expressions = expression_rows(scenario["expressions"])
     vocab, video_vocab = reading_helpers(news, listening)
-    card_note = "周六生活场景加强版" if weekend else "第一阶段：生活场景 40% · 听力 40% · 新闻 20%"
+    card_note = "v4：德国生活德语阅读助手。中文为主，德语为辅，10-15 分钟看懂当天内容。"
     annotated_terms: set[str] = set()
     annotated_dialogue = [
         (speaker, annotate_text(line, vocab, annotated_terms))
@@ -623,130 +822,217 @@ def build_daily(sequence: int, today: dt.date, history: list[dict], mode: str) -
     ]
     annotated_de_summary = annotate_text(de_summary, vocab, annotated_terms)
     annotated_listening_title = annotate_text(listening.title, vocab, annotated_terms)
-    video_keywords = helper_list_text(video_vocab or vocab[:3])
-    reading_helper = helper_list_text(vocab)
+    video_keywords = vocabulary_rows(video_vocab or vocab[:5], 5)
+    news_vocab = expanded_vocabulary_rows(vocab, minimum=8, limit=12)
+    reusable = reusable_sentence_rows(scenario)
+    scenario_expr = expression_detail_rows(expressions, scenario)
+    news_expr = news_expression_rows()
+    key_sentences = key_sentence_rows(page_excerpt(listening, listening_page, 140), listening.title)
+    today_takeaways = takeaways(scenario_expr, news_vocab)
+    listening_intro_text = listening_intro(listening, listening_page)
+    listening_guide_text = listening_guide(listening, listening_page)
+    translated_news = news_translation(news, news_page)
 
     dialogue_html = "".join(f"<p><strong>{h(speaker)}:</strong> {h(line)}</p>" for speaker, line in annotated_dialogue)
-    sentences_html = "".join(f"<li>{h(line)}</li>" for line in scenario["sentences"][:5])
-    expr_html = "".join(
-        f"<div class='expr'><strong>{h(e['de'])}</strong><br>中文：{h(e['cn'])}<br>场景：{h(e['scene'])}<br>替换：{h(e['alt'])}</div>"
-        for e in expressions
+    reusable_html = "".join(
+        f"<div class='expr'><strong>德语：</strong> {h(row['de'])}<br><strong>中文：</strong> {h(row['cn'])}<br><strong>适用场景：</strong> {h(row['scene'])}</div>"
+        for row in reusable
     )
-    reading_helper_html = "<br>".join(h(line) for line in reading_helper.splitlines())
-    video_keywords_html = "<br>".join(h(line) for line in video_keywords.splitlines())
+    scenario_expr_html = "".join(
+        f"<div class='expr'><strong>{h(e['de'])}</strong><br>中文意思：{h(e['cn'])}<br>使用场景：{h(e['scene'])}<br>德语例句：{h(e['example'])}<br>中文翻译：{h(e['translation'])}</div>"
+        for e in scenario_expr
+    )
+    key_sentences_html = "".join(
+        f"<div class='expr'><strong>德语：</strong> {h(row['de'])}<br><strong>中文：</strong> {h(row['cn'])}</div>"
+        for row in key_sentences
+    )
+    video_keywords_html = "".join(
+        f"<div class='expr'><strong>{h(row['word'])}</strong><br>中文意思：{h(row['cn'])}<br>例句：{h(row['example'])}</div>"
+        for row in video_keywords
+    )
+    news_vocab_html = "".join(
+        f"<div class='expr'><strong>词汇：</strong> {h(row['word'])}<br>词性：{h(row['pos'])}<br>中文意思：{h(row['cn'])}<br>本文中的意思：{h(row['context'])}<br>德国使用频率：{h(row['frequency'])}<br>例句：{h(row['example'])}</div>"
+        for row in news_vocab
+    )
+    news_expr_html = "".join(
+        f"<div class='expr'><strong>{h(e['de'])}</strong><br>中文意思：{h(e['cn'])}<br>使用场景：{h(e['scene'])}<br>德语例句：{h(e['example'])}<br>中文翻译：{h(e['translation'])}</div>"
+        for e in news_expr
+    )
+    takeaways_html = "".join(
+        f"<div class='expr'><strong>表达：</strong> {h(item['expr'])}<br>中文意思：{h(item['cn'])}<br>一句例句：{h(item['example'])}<br>中文翻译：{h(item['translation'])}</div>"
+        for item in today_takeaways
+    )
 
     html_body = html_page(
         subject,
         f"""
 <div class="head"><h1>{h(subject)}</h1><p>{h(card_note)}</p></div>
-<div class="section card"><h2>🧒 一、今日生活场景，约 4 分钟</h2>
+<div class="section card"><h2>今日生活场景</h2>
   <p>{h(scenario["intro"])}</p>
-  <h3>德语对话</h3><div class="de">{dialogue_html}</div>
+  <h3>德语原对话</h3><div class="de">{dialogue_html}</div>
   <h3>中文翻译</h3><p>{h(scenario["translation"])}</p>
-  <h3>5 个可直接套用句子</h3><ol>{sentences_html}</ol>
+  <h3>可直接复用句子</h3>{reusable_html}
+  <h3>高频表达</h3>{scenario_expr_html}
 </div>
-<div class="section card"><h2>🎧 二、今日听力训练，约 3 分钟</h2>
-  <h3>视频关键词</h3><p>{video_keywords_html}</p>
-  <p><strong>{h(annotated_listening_title)}</strong></p>
-  <p><a href="{h(listening.link)}">{h(listening.link)}</a></p>
-  <p><strong>德语字幕/文本：</strong>打开页面后优先使用页面自带字幕、文稿或新闻正文。</p>
-  <p><strong>中文摘要：</strong>这是一段 1-3 分钟短音频/视频，用来恢复听力反应。目标是听懂 70%-80%，不用逐词听懂。</p>
-  <p>推荐理由：短、清楚、信息结构稳定，适合早上先把德语耳朵打开。</p>
+<div class="section card"><h2>今日听力</h2>
+  <h3>视频/音频简介</h3><p>{h(listening_intro_text)}</p>
+  <p><strong>{h(annotated_listening_title)}</strong><br><a href="{h(listening.link)}">{h(listening.link)}</a></p>
+  <h3>视频内容中文导读</h3><p>{h(listening_guide_text)}</p>
+  <h3>关键句提取</h3>{key_sentences_html}
+  <h3>听力难度</h3><p>B1-B2。原因：素材短、结构清楚，但新闻语速和名词化表达仍然需要适应。</p>
+  <h3>高频表达</h3>{video_keywords_html}
 </div>
-<div class="section card"><h2>📰 三、今日德国新闻，约 2 分钟</h2>
-  <h3>德语标题</h3><p class="de">{h(news.title)}</p>
-  <h3>中文标题</h3><p>{h(cn_title(news))}</p>
-  <h3>德语摘要</h3><p class="de">{h(annotated_de_summary)}</p>
-  <h3>中文摘要</h3><p>{h(cn_summary(news))}</p>
+<div class="section card"><h2>今日德国新闻</h2>
+  <h3>新闻摘要</h3><p>{h(cn_summary(news))}</p>
+  <h3>全文中文翻译</h3><p>{h(translated_news).replace(chr(10), '<br>')}</p>
+  <h3>德语原文线索</h3><p class="de">{h(annotated_de_summary)}</p>
   <p><a href="{h(news.link)}">打开原文</a></p>
+  <h3>重点词汇</h3>{news_vocab_html}
+  <h3>高频表达</h3>{news_expr_html}
 </div>
-<div class="section card"><h2>💬 四、今日表达，约 1 分钟</h2>{expr_html}</div>
-<div class="section card"><h2>📖 五、阅读辅助</h2>
-  <p>{reading_helper_html}</p>
-</div>
+<div class="section card"><h2>今天只记住这3个</h2>{takeaways_html}</div>
 """,
+    )
+
+    reusable_text = "\n".join(
+        f"德语：{row['de']}\n中文：{row['cn']}\n适用场景：{row['scene']}"
+        for row in reusable
+    )
+    scenario_expr_text = "\n".join(
+        f"- {e['de']}\n  中文意思：{e['cn']}\n  使用场景：{e['scene']}\n  德语例句：{e['example']}\n  中文翻译：{e['translation']}"
+        for e in scenario_expr
+    )
+    key_sentences_text = "\n".join(f"德语：{row['de']}\n中文：{row['cn']}" for row in key_sentences)
+    video_keywords_text = "\n".join(
+        f"- {row['word']}：{row['cn']}\n  例句：{row['example']}"
+        for row in video_keywords
+    )
+    news_vocab_text = "\n".join(
+        f"词汇：{row['word']}\n词性：{row['pos']}\n中文意思：{row['cn']}\n本文中的意思：{row['context']}\n德国使用频率：{row['frequency']}\n例句：{row['example']}"
+        for row in news_vocab
+    )
+    news_expr_text = "\n".join(
+        f"- {e['de']}\n  中文意思：{e['cn']}\n  使用场景：{e['scene']}\n  德语例句：{e['example']}\n  中文翻译：{e['translation']}"
+        for e in news_expr
+    )
+    takeaways_text = "\n".join(
+        f"表达：{item['expr']}\n中文意思：{item['cn']}\n一句例句：{item['example']}\n中文翻译：{item['translation']}"
+        for item in today_takeaways
     )
 
     text_body = f"""{subject}
 
-🧒 一、今日生活场景，约 4 分钟
+{card_note}
+
+## 今日生活场景
 {scenario["intro"]}
 
-德语对话：
+### 德语原对话
 {dialogue_text(annotated_dialogue)}
 
-中文翻译：
+### 中文翻译
 {scenario["translation"]}
 
-5 个可直接套用句子：
-{chr(10).join(f"{i}. {line}" for i, line in enumerate(scenario["sentences"][:5], 1))}
+### 可直接复用句子
+{reusable_text}
 
-🎧 二、今日听力训练，约 3 分钟
-🎧 视频关键词
-{video_keywords}
+### 高频表达
+{scenario_expr_text}
 
+## 今日听力
 标题：{annotated_listening_title}
 链接：{listening.link}
-德语字幕/文本：打开页面后优先使用页面自带字幕、文稿或新闻正文。
-中文摘要：这是一段 1-3 分钟短音频/视频，用来恢复听力反应。目标是听懂 70%-80%，不用逐词听懂。
-推荐理由：短、清楚、信息结构稳定，适合早上先把德语耳朵打开。
 
-📰 三、今日德国新闻，约 2 分钟
-德语标题：{news.title}
-中文标题：{cn_title(news)}
+### 视频/音频简介
+{listening_intro_text}
 
-德语摘要：
-{annotated_de_summary}
+### 视频内容中文导读
+{listening_guide_text}
 
-中文摘要：
+### 关键句提取
+{key_sentences_text}
+
+### 听力难度
+B1-B2。素材短、结构清楚，但新闻语速和名词化表达仍然需要适应。
+
+### 高频表达
+{video_keywords_text}
+
+## 今日德国新闻
+链接：{news.link}
+
+### 新闻摘要
 {cn_summary(news)}
 
-原文链接：{news.link}
+### 全文中文翻译
+{translated_news}
 
-💬 四、今日表达，约 1 分钟
-{chr(10).join(f"- {e['de']}\\n  中文：{e['cn']}\\n  场景：{e['scene']}\\n  替换：{e['alt']}" for e in expressions)}
+### 重点词汇
+{news_vocab_text}
 
-📖 五、阅读辅助
-{reading_helper}
+### 高频表达
+{news_expr_text}
+
+## 今天只记住这3个
+{takeaways_text}
 """
 
     telegram_body = f"""<b>{tg(subject)}</b>
 
-🧒 <b>生活场景</b>
+{tg(card_note)}
+
+<b>今日生活场景</b>
 {tg(scenario["intro"])}
 
-<b>德语对话</b>
+<b>德语原对话</b>
 {tg(dialogue_text(annotated_dialogue))}
 
 <b>中文翻译</b>
 {tg(scenario["translation"])}
 
-<b>可直接套用</b>
-{tg(chr(10).join(f"{i}. {line}" for i, line in enumerate(scenario["sentences"][:5], 1)))}
+<b>可直接复用句子</b>
+{tg(reusable_text)}
 
-🎧 <b>听力训练</b>
-<b>视频关键词</b>
-{tg(video_keywords)}
+<b>高频表达</b>
+{tg(scenario_expr_text)}
 
+<b>今日听力</b>
 {tg(annotated_listening_title)}
 {tg(listening.link)}
-德语字幕/文本：打开页面后优先使用页面自带字幕、文稿或新闻正文。
-中文摘要：1-3 分钟短素材，目标是听懂 70%-80%，不用逐词听懂。
 
-📰 <b>德国新闻</b>
+<b>视频/音频简介</b>
+{tg(listening_intro_text)}
+
+<b>视频内容中文导读</b>
+{tg(listening_guide_text)}
+
+<b>关键句提取</b>
+{tg(key_sentences_text)}
+
+<b>听力难度</b>
+B1-B2。素材短、结构清楚，但新闻语速和名词化表达仍然需要适应。
+
+<b>高频表达</b>
+{tg(video_keywords_text)}
+
+<b>今日德国新闻</b>
 {tg(news.title)}
-中文：{tg(cn_title(news))}
-
-{tg(annotated_de_summary)}
-
-{tg(cn_summary(news))}
 {tg(news.link)}
 
-💬 <b>今日表达</b>
-{tg(chr(10).join(f"- {e['de']}：{e['cn']} / {e['alt']}" for e in expressions))}
+<b>新闻摘要</b>
+{tg(cn_summary(news))}
 
-📖 <b>阅读辅助</b>
-{tg(reading_helper)}
+<b>全文中文翻译</b>
+{tg(translated_news)}
+
+<b>重点词汇</b>
+{tg(news_vocab_text)}
+
+<b>高频表达</b>
+{tg(news_expr_text)}
+
+<b>今天只记住这3个</b>
+{tg(takeaways_text)}
 """
 
     record = {
@@ -760,6 +1046,7 @@ def build_daily(sequence: int, today: dt.date, history: list[dict], mode: str) -
         "listening_link": listening.link,
         "expressions": [e["de"] for e in expressions],
         "vocabulary": [item["word"] for item in vocab],
+        "version": "v4",
     }
     return subject, html_body, text_body, telegram_body, record
 
