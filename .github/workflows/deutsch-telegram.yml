@@ -20,6 +20,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: deutsch-telegram
@@ -38,11 +40,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Generate Deutsch Telegram message
+      - name: Generate Deutsch Telegram message and page
         id: generate
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4.1-mini' }}
+          PUBLIC_PAGE_BASE: ${{ vars.PUBLIC_PAGE_BASE || 'https://jy0828.github.io/jiayi-telegram-bot' }}
         run: |
           MODE="${{ inputs.mode || 'auto' }}"
           TELEGRAM_TEST="false"
@@ -68,7 +71,21 @@ jobs:
             GENERATE_MODE="daily"
           fi
           echo "telegram_test=$TELEGRAM_TEST" >> "$GITHUB_OUTPUT"
-          python scripts/generate_deutsch_reactivation_email.py --mode "$GENERATE_MODE" --history "$HISTORY"
+          python scripts/generate_deutsch_reactivation_page.py --mode "$GENERATE_MODE" --history "$HISTORY"
+
+      - name: Configure GitHub Pages
+        if: steps.generate.outputs.skip != 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Deutsch page artifact
+        if: steps.generate.outputs.skip != 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: outputs
+
+      - name: Deploy Deutsch page
+        if: steps.generate.outputs.skip != 'true'
+        uses: actions/deploy-pages@v4
 
       - name: Send Telegram
         id: telegram

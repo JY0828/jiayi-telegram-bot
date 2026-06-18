@@ -5,3 +5,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+outputs/
+deutsch-reaktivierung-*.html
+deutsch-reaktivierung-*.txt
+telegram-test-history.json

@@ -14,7 +14,7 @@ Standalone Telegram Bot service and Telegram-only automation repository for Jiay
 
 ## Deutsch Telegram Automation
 
-`.github/workflows/deutsch-telegram.yml` sends Deutsch Reaktivierung v4 to Telegram only.
+`.github/workflows/deutsch-telegram.yml` sends Deutsch Reaktivierung v5 to Telegram only.
 
 Required repository secrets:
 
@@ -31,7 +31,9 @@ Optional repository variable:
 
 The scheduled workflow uses several non-top-of-hour attempts during the 07:00-08:59 Europe/Berlin window. It records successful daily sends in `sent_history.json` to avoid duplicates, so at most one Telegram push is sent per day.
 
-The v4 content is a German-life reading assistant: Chinese-first explanations, full life-scenario dialogue, reusable German sentences, short listening guidance, German-news translation support, dynamic key vocabulary, high-frequency expressions, and three takeaways for the day. It is designed for 10-15 minutes of comprehension, not memorization.
+The v5 format uses a light push plus a detail page. Telegram receives only the scenario title, listening title, news title, three takeaways, and a link to the full static HTML page. The detail page is generated under `outputs/deutsch-pages/YYYY-MM-DD.html` and deployed with GitHub Pages.
+
+The detail page is a German-life reading assistant: Chinese-first explanations, full life-scenario dialogue, reusable German sentences, short listening guidance, German-news body extraction when available, dynamic key vocabulary, high-frequency expressions, and three takeaways for the day. When article body or video transcript extraction fails, the page says so explicitly instead of inventing full translations or fake key sentences.
 
 ## Local Setup
 
