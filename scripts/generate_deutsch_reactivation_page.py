@@ -17,7 +17,7 @@ from pathlib import Path
 import generate_deutsch_reactivation_email as base
 
 
-DEFAULT_PAGE_BASE = "https://jy0828.github.io/jiayi-telegram-bot"
+DEFAULT_PAGE_BASE = "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs"
 
 
 class ParagraphExtractor(HTMLParser):

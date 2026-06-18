@@ -31,7 +31,7 @@ Optional repository variable:
 
 The scheduled workflow uses several non-top-of-hour attempts during the 07:00-08:59 Europe/Berlin window. It records successful daily sends in `sent_history.json` to avoid duplicates, so at most one Telegram push is sent per day.
 
-The v5 format uses a light push plus a detail page. Telegram receives only the scenario title, listening title, news title, three takeaways, and a link to the full static HTML page. The detail page is generated under `outputs/deutsch-pages/YYYY-MM-DD.html` and deployed with GitHub Pages.
+The v5 format uses a light push plus a detail page. Telegram receives only the scenario title, listening title, news title, three takeaways, and a link to the full static HTML page. The detail page is generated under `outputs/deutsch-pages/YYYY-MM-DD.html`, committed to the repository, and opened through a public HTML preview URL.
 
 The detail page is a German-life reading assistant: Chinese-first explanations, full life-scenario dialogue, reusable German sentences, short listening guidance, German-news body extraction when available, dynamic key vocabulary, high-frequency expressions, and three takeaways for the day. When article body or video transcript extraction fails, the page says so explicitly instead of inventing full translations or fake key sentences.
 

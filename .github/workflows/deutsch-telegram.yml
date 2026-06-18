@@ -20,8 +20,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: deutsch-telegram
@@ -45,7 +43,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4.1-mini' }}
-          PUBLIC_PAGE_BASE: ${{ vars.PUBLIC_PAGE_BASE || 'https://jy0828.github.io/jiayi-telegram-bot' }}
+          PUBLIC_PAGE_BASE: ${{ vars.PUBLIC_PAGE_BASE || 'https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs' }}
         run: |
           MODE="${{ inputs.mode || 'auto' }}"
           TELEGRAM_TEST="false"
@@ -73,21 +71,21 @@ jobs:
           echo "telegram_test=$TELEGRAM_TEST" >> "$GITHUB_OUTPUT"
           python scripts/generate_deutsch_reactivation_page.py --mode "$GENERATE_MODE" --history "$HISTORY"
 
-      - name: Configure GitHub Pages
+      - name: Commit generated page and history
         if: steps.generate.outputs.skip != 'true'
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
-      - name: Upload Deutsch page artifact
-        if: steps.generate.outputs.skip != 'true'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: outputs
-
-      - name: Deploy Deutsch page
-        if: steps.generate.outputs.skip != 'true'
-        uses: actions/deploy-pages@v4
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add outputs/deutsch-pages
+          if [ "${{ steps.generate.outputs.telegram_test }}" != "true" ]; then
+            git add sent_history.json
+          fi
+          if [ -z "$(git status --porcelain -- outputs/deutsch-pages sent_history.json)" ]; then
+            echo "No generated page or history changes."
+            exit 0
+          fi
+          git commit -m "Add Deutsch learning page"
+          git push
 
       - name: Send Telegram
         id: telegram
@@ -98,16 +96,3 @@ jobs:
           TELEGRAM_MESSAGE_FILE: deutsch-reaktivierung-telegram.html
           TELEGRAM_ERROR_LOG: telegram-error.log
         run: python scripts/send_telegram.py
-
-      - name: Commit sent history
-        if: steps.generate.outputs.skip != 'true' && steps.generate.outputs.telegram_test != 'true'
-        run: |
-          if [ -z "$(git status --porcelain -- sent_history.json)" ]; then
-            echo "No sent history changes."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add sent_history.json
-          git commit -m "Update Deutsch Telegram sent history"
-          git push
