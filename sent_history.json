@@ -79,5 +79,23 @@
       "die Sendung",
       "zuständig"
     ]
+  },
+  {
+    "sequence": 5,
+    "date": "2026-06-19",
+    "mode": "daily",
+    "topic": "Kinderarzt",
+    "news_title": "17.06.2026 – Langsam Gesprochene Nachrichten",
+    "news_link": "https://learngerman.dw.com/de/17062026-langsam-gesprochene-nachrichten/a-77584671",
+    "listening_title": "18.06.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/18062026-langsam-gesprochene-nachrichten/a-77599002",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-06-19.html",
+    "page_path": "outputs/deutsch-pages/2026-06-19.html",
+    "expressions": [
+      "der Allgemeinzustand",
+      "ansprechbar sein",
+      "Sendung"
+    ],
+    "version": "v5"
   }
 ]
