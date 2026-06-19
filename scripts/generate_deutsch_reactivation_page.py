@@ -18,7 +18,7 @@ from pathlib import Path
 import generate_deutsch_reactivation_email as base
 
 
-DEFAULT_PAGE_BASE = "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs"
+DEFAULT_PAGE_BASE = "https://raw.githack.com/JY0828/jiayi-telegram-bot/main/outputs"
 DW_SLOW_NEWS_URL = "https://learngerman.dw.com/de/langsam-gesprochene-nachrichten/s-60040332"
 NACHRICHTENLEICHT_FEED = "https://www.deutschlandfunk.de/podcast-nachrichtenleicht-der-wochenrueckblick-in-einfacher-sprache-100.xml"
 LIFE_SOURCE_CANDIDATES = (
