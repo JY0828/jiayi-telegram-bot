@@ -14,6 +14,9 @@ on:
           - saturday
           - sunday
           - telegram_test
+  push:
+    paths:
+      - .github/deutsch-telegram-test.trigger
   schedule:
     # Avoid the top-of-hour Actions rush. The job gates on the Berlin 07:00-08:59 window below.
     - cron: "17,32,47 * * * *"
@@ -46,6 +49,9 @@ jobs:
           PUBLIC_PAGE_BASE: ${{ vars.PUBLIC_PAGE_BASE || 'https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs' }}
         run: |
           MODE="${{ inputs.mode || 'auto' }}"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            MODE="telegram_test"
+          fi
           TELEGRAM_TEST="false"
           if [ "${{ github.event_name }}" = "schedule" ]; then
             BERLIN_HOUR="$(TZ=Europe/Berlin date +%H)"
