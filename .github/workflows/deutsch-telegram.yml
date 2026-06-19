@@ -20,6 +20,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: deutsch-telegram
@@ -43,7 +45,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4.1-mini' }}
-          PUBLIC_PAGE_BASE: ${{ vars.PUBLIC_PAGE_BASE || 'https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs' }}
+          PUBLIC_PAGE_BASE: ${{ vars.PUBLIC_PAGE_BASE || 'https://jy0828.github.io/jiayi-telegram-bot' }}
         run: |
           MODE="${{ inputs.mode || 'auto' }}"
           TELEGRAM_TEST="false"
@@ -86,6 +88,20 @@ jobs:
           fi
           git commit -m "Add Deutsch learning page"
           git push
+
+      - name: Configure GitHub Pages
+        if: steps.generate.outputs.skip != 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Deutsch pages
+        if: steps.generate.outputs.skip != 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: outputs
+
+      - name: Deploy Deutsch pages
+        if: steps.generate.outputs.skip != 'true'
+        uses: actions/deploy-pages@v4
 
       - name: Send Telegram
         id: telegram

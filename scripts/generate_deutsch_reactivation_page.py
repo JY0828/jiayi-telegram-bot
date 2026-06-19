@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Generate Deutsch Reaktivierung v5: short push plus a static detail page."""
 
 from __future__ import annotations
@@ -8,6 +8,7 @@ import html
 import json
 import os
 import re
+import ssl
 import sys
 import urllib.error
 import urllib.request
@@ -17,9 +18,32 @@ from pathlib import Path
 import generate_deutsch_reactivation_email as base
 
 
-DEFAULT_PAGE_BASE = "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs"
+DEFAULT_PAGE_BASE = "https://jy0828.github.io/jiayi-telegram-bot"
 DW_SLOW_NEWS_URL = "https://learngerman.dw.com/de/langsam-gesprochene-nachrichten/s-60040332"
 NACHRICHTENLEICHT_FEED = "https://www.deutschlandfunk.de/podcast-nachrichtenleicht-der-wochenrueckblick-in-einfacher-sprache-100.xml"
+LIFE_SOURCE_CANDIDATES = (
+    {
+        "source": "Die Techniker",
+        "url": "https://www.tk.de/techniker/gesundheit-foerdern/familie/kinder-und-jugendliche/krankheiten-bei-kindern-und-jugendlichen/fieber-bei-kindern-2013166",
+        "theme": "Kinderarzt: Fieber bei Kindern einschätzen und beschreiben",
+        "topic": "孩子发烧时如何与 Kinderarzt 沟通",
+        "keywords": ("fieber", "kind", "kinderarzt", "ärztin", "arzt", "temperatur"),
+    },
+    {
+        "source": "116117",
+        "url": "https://www.116117.de/de/aerztlicher-bereitschaftsdienst.php",
+        "theme": "116117: Bereitschaftsdienst oder Notruf 112",
+        "topic": "判断什么时候打 116117，什么时候打 112",
+        "keywords": ("116117", "112", "bereitschaftsdienst", "beschwerden", "praxis", "notfall"),
+    },
+    {
+        "source": "Familienportal des Bundes",
+        "url": "https://familienportal.de/familienportal/familienleistungen/elterngeld/faq/wie-kann-ich-elterngeld-beantragen--124762",
+        "theme": "Elterngeld beantragen",
+        "topic": "申请 Elterngeld 时要注意时间和材料",
+        "keywords": ("elterngeld", "antrag", "geburt", "lebensmonate", "beantragen"),
+    },
+)
 
 
 class ParagraphExtractor(HTMLParser):
@@ -33,7 +57,7 @@ class ParagraphExtractor(HTMLParser):
         if tag in {"script", "style", "nav", "footer", "header", "aside"}:
             self._stack.append(tag)
             return
-        if tag in {"p", "li", "h2", "h3"}:
+        if tag in {"p", "li", "h1", "h2", "h3", "tkds-text", "tkds-headline"}:
             self._stack.append(tag)
             self._buf = []
 
@@ -41,7 +65,7 @@ class ParagraphExtractor(HTMLParser):
         if not self._stack:
             return
         if self._stack[-1] == tag:
-            if tag in {"p", "li", "h2", "h3"}:
+            if tag in {"p", "li", "h1", "h2", "h3", "tkds-text", "tkds-headline"}:
                 text = base.clean_text(" ".join(self._buf))
                 if is_content_paragraph(text):
                     self.paragraphs.append(text)
@@ -53,7 +77,7 @@ class ParagraphExtractor(HTMLParser):
             return
         if self._stack[-1] in {"script", "style", "nav", "footer", "header", "aside"}:
             return
-        if self._stack[-1] in {"p", "li", "h2", "h3"}:
+        if self._stack[-1] in {"p", "li", "h1", "h2", "h3", "tkds-text", "tkds-headline"}:
             self._buf.append(data)
 
 
@@ -80,6 +104,16 @@ def is_content_paragraph(text: str) -> bool:
         "download",
         "audio",
         "video",
+        "matomo",
+        "einwilligung",
+        "webverhalten",
+        "datenschutz",
+        "cookie",
+        "sprachauswahl",
+        "english",
+        "icon",
+        "kontakt",
+        "barrierefreiheit",
     )
     return sum(marker in lowered for marker in noisy) == 0
 
@@ -88,7 +122,13 @@ def fetch_raw(url: str) -> tuple[str, str | None]:
     try:
         return base.fetch_text(url, timeout=25), None
     except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
-        return "", str(exc)
+        try:
+            request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(request, timeout=25, context=ssl._create_unverified_context()) as response:
+                charset = response.headers.get_content_charset() or "utf-8"
+                return response.read().decode(charset, errors="replace"), None
+        except (urllib.error.URLError, TimeoutError, OSError, ValueError):
+            return "", str(exc)
 
 
 def absolute_url(url: str, base_url: str) -> str:
@@ -235,6 +275,65 @@ def choose_reading_article(skip_url: str | None = None) -> dict:
     # worse than switching sources, so use the full-text DW fallback.
     _ = nachrichtenleicht_candidates()
     return choose_dw_slow_news(500, require_audio=False, skip_url=skip_url)
+
+
+def choose_life_article() -> dict:
+    for candidate in LIFE_SOURCE_CANDIDATES:
+        paragraphs, error = extract_article_paragraphs(candidate["url"], None)
+        if error:
+            continue
+        paragraphs = relevant_life_paragraphs(paragraphs, candidate["keywords"])
+        text = " ".join(paragraphs)
+        if len(text) < 500:
+            continue
+        return {
+            **candidate,
+            "paragraphs": paragraphs[:8],
+            "sections": [{"heading": candidate["theme"], "paragraphs": paragraphs[:8]}],
+        }
+    raise RuntimeError("No complete life source article passed quality checks.")
+
+
+def relevant_life_paragraphs(paragraphs: list[str], keywords: tuple[str, ...]) -> list[str]:
+    scored = []
+    for paragraph in paragraphs:
+        lower = paragraph.casefold()
+        score = sum(1 for keyword in keywords if keyword in lower)
+        scored.append((score, paragraph))
+    start = next((idx for idx, (score, _) in enumerate(scored) if score > 0), 0)
+    selected: list[str] = []
+    misses = 0
+    for score, paragraph in scored[start:]:
+        if score > 0 or len(selected) < 3:
+            selected.append(paragraph)
+            misses = 0 if score > 0 else misses + 1
+        else:
+            misses += 1
+            if misses <= 1 and len(paragraph.split()) >= 10:
+                selected.append(paragraph)
+        if len(selected) >= 10:
+            break
+        if len(selected) >= 5 and misses >= 2:
+            break
+    return selected or paragraphs
+
+
+def choose_scenario_for_life(life: dict, history: list[dict], weekend: bool = False) -> dict:
+    haystack = f"{life.get('theme', '')} {life.get('topic', '')} {life.get('url', '')}".casefold()
+    preferred_topic = ""
+    if "fieber" in haystack or "kinderarzt" in haystack:
+        preferred_topic = "Kinderarzt"
+    elif "116117" in haystack or "facharzt" in haystack:
+        preferred_topic = "116117 / Facharzttermin"
+    elif "kita" in haystack:
+        preferred_topic = "Kita / Eingewöhnung"
+    elif "bürgeramt" in haystack:
+        preferred_topic = "Bürgeramt"
+    if preferred_topic:
+        for scenario in base.SCENARIOS:
+            if scenario.get("topic") == preferred_topic:
+                return scenario
+    return base.choose_scenario(history, weekend=weekend)
 
 
 def extract_escaped_field(raw: str, field: str) -> str:
@@ -468,7 +567,7 @@ def unique_takeaways(primary: list[dict], extras: list[dict], limit: int = 3) ->
     rows: list[dict] = []
     seen: set[str] = set()
     for item in [*primary, *extras]:
-        expr = str(item.get("expr") or item.get("word") or "").strip()
+        expr = str(item.get("expr") or item.get("de") or item.get("word") or "").strip()
         if not expr:
             continue
         key = re.sub(r"^(der|die|das|ein|eine)\s+", "", expr.casefold()).strip()
@@ -534,6 +633,8 @@ def build_page(title: str, body: str) -> str:
     .de {{ background:#f8fafc; border-left:4px solid #64748b; padding:10px 12px; border-radius:4px; }}
     .zh {{ background:#fffaf0; border-left:4px solid #f59e0b; padding:10px 12px; border-radius:4px; }}
     .item {{ background:#f8fafc; border:1px solid #e6ebf2; border-radius:8px; padding:11px 12px; margin:10px 0; }}
+    .meta {{ margin:4px 0; color:#d8e4f0; }}
+    .theme {{ margin-top:14px; font-weight:700; }}
     a {{ color:#0b66c3; overflow-wrap:anywhere; }}
     .muted {{ color:#5f6b7a; }}
     @media (max-width: 520px) {{ body {{ font-size:16px; }} main {{ padding:10px 10px 36px; }} section {{ padding:13px; }} h1 {{ font-size:22px; }} }}
@@ -545,31 +646,42 @@ def build_page(title: str, body: str) -> str:
 
 def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_base: str) -> tuple[str, str, str, str, dict, Path]:
     weekend = mode == "saturday"
-    scenario = base.choose_scenario(history, weekend=weekend)
     date = today.isoformat()
-    subject = f"🇩🇪 今日德语 #{sequence:03d} - {date}"
+    display_title = f"🇩🇪 今日德语 #{sequence:03d}"
+    subject = f"{display_title} - {date}"
     page_url = page_link_for(date, page_base)
 
+    life = choose_life_article()
+    scenario = choose_scenario_for_life(life, history, weekend=weekend)
     listening = choose_dw_slow_news(300, require_audio=True)
     reading = choose_reading_article(skip_url=listening["url"])
+    life_flat = life["paragraphs"]
     listening_flat = flatten_sections(listening["sections"])
     reading_flat = flatten_sections(reading["sections"])
+    if sum(len(p) for p in life_flat) < 500:
+        raise RuntimeError("Life text failed quality check.")
     if sum(len(p) for p in listening_flat) < 300:
         raise RuntimeError("Listening text failed quality check.")
     if sum(len(p) for p in reading_flat) < 500:
         raise RuntimeError("Reading text failed quality check.")
+    life_translation = translate_required(life_flat, "life")
     listening_translation = translate_required(listening_flat, "listening")
     reading_translation = translate_required(reading_flat, "reading")
 
     expressions = base.expression_rows(scenario["expressions"])
     scenario_expr = base.expression_detail_rows(expressions, scenario)
+    life_text = " ".join(life_flat)
     listening_text = " ".join(listening_flat)
     reading_text = " ".join(reading_flat)
+    life_vocab = vocab_from_text(life_text, 12)
     listening_vocab = vocab_from_text(listening_text, 5)
-    reading_vocab = vocab_from_text(reading_text, 5)
+    reading_vocab = dynamic_vocab(
+        [item for item in base.VOCAB_CANDIDATES if base.matches_helper(item, reading_text.casefold())],
+        reading_flat,
+    )
     listening_expr = base.news_expression_rows()[:3]
-    reading_expr = base.news_expression_rows()
-    takeaways = unique_takeaways(base.takeaways(scenario_expr, reading_vocab), [*listening_vocab, *reading_vocab])
+    reading_expr = base.news_expression_rows()[:12]
+    takeaways = unique_takeaways(scenario_expr, [*life_vocab, *listening_vocab, *reading_vocab])
 
     dialogue = base.dialogue_text(scenario["dialogue"])
     reusable = base.reusable_sentence_rows(scenario)
@@ -577,38 +689,41 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
         f"<div class='item'><b>德语：</b> {h(row['de'])}<br><b>中文：</b> {h(row['cn'])}<br><b>适用场景：</b> {h(row['scene'])}</div>"
         for row in reusable
     )
-    takeaway_html = "".join(
-        f"<div class='item'><b>{h(item['expr'])}</b><br>中文意思：{h(item['cn'])}<br>例句：{h(item['example'])}<br>中文翻译：{h(item['translation'])}</div>"
-        for item in takeaways
-    )
-
     listening_keys = sentence_rows_from_paragraphs(listening_flat, 12)
     listening_key_html = "".join(
         f"<div class='item'><b>德语：</b> {h(row['de'])}<br><b>中文：</b> {h(row['cn'])}</div>"
         for row in listening_keys
     )
+    life_translation_html = translated_html(life_flat, life_translation)
     listening_translation_html = translated_html(listening_flat, listening_translation)
     reading_translation_html = translated_html(reading_flat, reading_translation)
+    takeaway_html = "".join(
+        f"<div class='item'><b>{h(item['expr'])}</b><br>中文意思：{h(item['cn'])}<br>例句：{h(item['example'])}<br>中文翻译：{h(item['translation'])}</div>"
+        for item in takeaways
+    )
 
     page_body = f"""
 <header>
-  <h1>{h(subject)}</h1>
-  <p>轻推送 + 详情页版。推送只做入口，完整内容在这里阅读。</p>
+  <h1>{h(display_title)}</h1>
+  <p class="meta">{h(date)}</p>
+  <p class="theme">今日主题：{h(life["topic"])}</p>
+  <p>一句话简介：学习德国真实页面里关于{h(life["theme"])}的常用说法，降低今天读懂和开口沟通的成本。</p>
 </header>
 <section>
   <h2>1. 今日生活场景</h2>
-  <p>{h(scenario["intro"])}</p>
-  {details("德语原对话", f"<div class='de'><pre>{h(dialogue)}</pre></div>", True)}
-  {details("中文翻译", f"<div class='zh'>{h(scenario['translation'])}</div>", True)}
-  {details("可直接复用句子", reusable_html, False)}
+  <p><b>来源：</b>{h(life["source"])}<br><b>主题：</b>{h(life["theme"])}<br><b>原文链接：</b><a href="{h(life["url"])}">{h(life["url"])}</a></p>
+  {details("原始内容", sections_html(life["sections"]), True)}
+  {details("中文翻译", f"<div class='zh'>{life_translation_html}</div>", True)}
+  {details("重点词汇", vocab_blocks(life_vocab), False)}
   {details("高频表达", expr_blocks(scenario_expr), False)}
-  {details("今天最值得记住的表达", takeaway_html, True)}
+  {details("德国人会怎么说", reusable_html, False)}
 </section>
 <section>
   <h2>2. 今日听力</h2>
   <p><b>{h(listening['title'])}</b></p>
   <p>音频链接：<a href="{h(listening['audio_url'])}">{h(listening['audio_url'])}</a></p>
   <p>正文来源：<a href="{h(listening['url'])}">{h(listening['url'])}</a></p>
+  {details("内容导读", "<p>这是一段慢速新闻材料，适合先看全文和译文，再带着关键词去听音频。重点不是背新闻，而是训练你快速识别德国公共语境里的机构、动作和影响。</p>", True)}
   {details("完整德语正文", sections_html(listening["sections"]), True)}
   {details("逐段中文翻译", f"<div class='zh'>{listening_translation_html}</div>", True)}
   {details("关键句 8-12 句", listening_key_html, False)}
@@ -622,9 +737,13 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
   <p><a href="{h(reading['url'])}">{h(reading['url'])}</a></p>
   {details("完整德语正文", sections_html(reading["sections"]), True)}
   {details("逐段中文翻译", f"<div class='zh'>{reading_translation_html}</div>", True)}
-  {details("重点词汇（5个）", vocab_blocks(reading_vocab), False)}
-  {details("重点表达（5个）", expr_blocks(reading_expr), False)}
+  {details("重点词汇", vocab_blocks(reading_vocab), False)}
+  {details("高频表达", expr_blocks(reading_expr), False)}
   {details("德国生活背景解释", "<p>这类材料适合恢复德国公共生活阅读能力：先抓机构、动作和影响，再看原因与后果。遇到政策、医疗、教育和行政词时，优先理解它在德国生活中的实际作用。</p>", True)}
+</section>
+<section>
+  <h2>今天只记住这 3 个</h2>
+  {takeaway_html}
 </section>
 """
     page_html = build_page(subject, page_body)
@@ -636,7 +755,7 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
     short_text = f"""{subject}
 
 今日主题：
-{scenario["intro"]}
+{life["topic"]}
 
 今日听力：
 {listening['title']}
@@ -655,7 +774,7 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
         f"""
 <header><h1>{h(subject)}</h1><p>完整学习页入口</p></header>
 <section>
-  <h2>今日主题</h2><p>{h(scenario["intro"])}</p>
+  <h2>今日主题</h2><p>{h(life["topic"])}</p>
   <h2>今日听力</h2><p>{h(listening['title'])}</p>
   <h2>今日阅读</h2><p>{h(reading['title'])}</p>
   <h2>今日只记住这 3 个</h2><pre>{h(takeaways_text)}</pre>
@@ -666,7 +785,7 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
     telegram = f"""<b>{tg(subject)}</b>
 
 <b>今日主题：</b>
-{tg(scenario["intro"])}
+{tg(life["topic"])}
 
 <b>今日听力：</b>
 {tg(listening['title'])}
@@ -745,3 +864,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
