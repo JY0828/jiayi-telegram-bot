@@ -269,7 +269,9 @@ def deutschlandfunk_teaser_article(url: str) -> dict | None:
     return {"source": "Nachrichtenleicht", "title": paragraphs[0][:80], "url": url, "sections": sections, "audio_url": ""}
 
 
-def choose_reading_article(skip_url: str | None = None) -> dict:
+def choose_reading_article(preferred: dict | None = None, skip_url: str | None = None) -> dict:
+    if preferred and quality_ok(preferred["sections"], 500):
+        return {**preferred, "audio_url": ""}
     # Nachrichtenleicht is intentionally probed but not accepted here yet: the current
     # pages often mix teaser text with Deutschlandfunk navigation/topic blocks. That is
     # worse than switching sources, so use the full-text DW fallback.
@@ -654,7 +656,7 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
     life = choose_life_article()
     scenario = choose_scenario_for_life(life, history, weekend=weekend)
     listening = choose_dw_slow_news(300, require_audio=True)
-    reading = choose_reading_article(skip_url=listening["url"])
+    reading = choose_reading_article(preferred=listening)
     life_flat = life["paragraphs"]
     listening_flat = flatten_sections(listening["sections"])
     reading_flat = flatten_sections(reading["sections"])
@@ -864,5 +866,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
 
