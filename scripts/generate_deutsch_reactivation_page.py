@@ -315,38 +315,61 @@ def choose_reading_article(
     return choose_dw_slow_news(500, require_audio=False, skip_url=skip_url, history=history, history_keys=("news_link",))
 
 
+def life_matches_history(entry: dict, candidate: dict) -> bool:
+    values = {
+        str(entry.get("life_url", "")).casefold(),
+        str(entry.get("life_topic", "")).casefold(),
+        str(entry.get("topic", "")).casefold(),
+    }
+    if candidate["url"].casefold() in values:
+        return True
+    return any(topic.casefold() in values for topic in candidate.get("history_topics", ()))
+
+
+def ordered_life_candidates(history: list[dict]) -> list[dict]:
+    scored: list[tuple[int, int, dict]] = []
+    for index, candidate in enumerate(LIFE_SOURCE_CANDIDATES):
+        last_seen = -1
+        for pos, entry in enumerate(history):
+            if life_matches_history(entry, candidate):
+                last_seen = pos
+        scored.append((last_seen, index, candidate))
+    return [candidate for _last_seen, _index, candidate in sorted(scored, key=lambda item: (item[0] != -1, item[0], item[1]))]
+
+
+def life_usage_count(history: list[dict], candidate: dict) -> int:
+    return sum(1 for entry in history if life_matches_history(entry, candidate))
+
+
+def rotate_paragraph_slice(paragraphs: list[str], usage_count: int, size: int = 8) -> tuple[list[str], int]:
+    if len(paragraphs) <= size:
+        return paragraphs, 0
+    max_start = len(paragraphs) - size
+    start = (usage_count * 4) % (max_start + 1)
+    return paragraphs[start : start + size], start
+
+
 def choose_life_article(history: list[dict]) -> dict:
     raw_index = os.getenv("DEUTSCH_LIFE_INDEX", "").strip()
-    ordered = list(LIFE_SOURCE_CANDIDATES)
+    ordered = ordered_life_candidates(history)
     if raw_index.isdigit():
+        ordered = list(LIFE_SOURCE_CANDIDATES)
         index = int(raw_index) % len(ordered)
         ordered = ordered[index:] + ordered[:index]
-    else:
-        used = recent_values(history, "life_url", limit=len(ordered))
-        recent_topics = {
-            str(entry.get("life_topic") or entry.get("topic") or "").casefold()
-            for entry in history[-len(ordered):]
-        }
-        fresh = [
-            candidate
-            for candidate in ordered
-            if candidate["url"].casefold() not in used
-            and not any(topic in recent_topics for topic in (value.casefold() for value in candidate.get("history_topics", ())))
-        ]
-        if fresh:
-            ordered = fresh
     for candidate in ordered:
         paragraphs, error = extract_article_paragraphs(candidate["url"], None)
         if error:
             continue
         paragraphs = relevant_life_paragraphs(paragraphs, candidate["keywords"])
+        paragraphs, slice_start = rotate_paragraph_slice(paragraphs, life_usage_count(history, candidate))
         text = " ".join(paragraphs)
         if len(text) < 500:
             continue
         return {
             **candidate,
-            "paragraphs": paragraphs[:8],
-            "sections": [{"heading": candidate["theme"], "paragraphs": paragraphs[:8]}],
+            "paragraphs": paragraphs,
+            "slice_start": slice_start,
+            "sections": [{"heading": candidate["theme"], "paragraphs": paragraphs}],
         }
     raise RuntimeError("No complete life source article passed quality checks.")
 
@@ -866,6 +889,7 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
         "life_topic": life["topic"],
         "life_source": life["source"],
         "life_url": life["url"],
+        "life_slice_start": life.get("slice_start", 0),
         "news_title": reading["title"],
         "news_link": reading["url"],
         "listening_title": listening["title"],
