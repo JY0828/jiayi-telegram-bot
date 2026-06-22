@@ -71,7 +71,7 @@ jobs:
           GENERATE_MODE="$MODE"
           if [ "$MODE" = "telegram_test" ]; then
             TELEGRAM_TEST="true"
-            HISTORY="telegram-test-history.json"
+            HISTORY="sent_history.json"
             GENERATE_MODE="daily"
           fi
           echo "telegram_test=$TELEGRAM_TEST" >> "$GITHUB_OUTPUT"
