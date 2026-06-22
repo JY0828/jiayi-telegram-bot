@@ -115,5 +115,23 @@
       "schlapp sein"
     ],
     "version": "v5"
+  },
+  {
+    "sequence": 7,
+    "date": "2026-06-22",
+    "mode": "daily",
+    "topic": "Kinderarzt",
+    "news_title": "20.06.2026 – Langsam Gesprochene Nachrichten",
+    "news_link": "https://learngerman.dw.com/de/20062026-langsam-gesprochene-nachrichten/a-77635258",
+    "listening_title": "20.06.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/20062026-langsam-gesprochene-nachrichten/a-77635258",
+    "page_url": "https://raw.githack.com/JY0828/jiayi-telegram-bot/main/outputs/deutsch-pages/2026-06-22.html",
+    "page_path": "outputs/deutsch-pages/2026-06-22.html",
+    "expressions": [
+      "der Allgemeinzustand",
+      "ansprechbar sein",
+      "schlapp sein"
+    ],
+    "version": "v5"
   }
 ]
