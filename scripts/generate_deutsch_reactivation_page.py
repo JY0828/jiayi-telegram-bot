@@ -28,6 +28,7 @@ LIFE_SOURCE_CANDIDATES = (
         "theme": "Kinderarzt: Fieber bei Kindern einschätzen und beschreiben",
         "topic": "孩子发烧时如何与 Kinderarzt 沟通",
         "keywords": ("fieber", "kind", "kinderarzt", "ärztin", "arzt", "temperatur"),
+        "history_topics": ("Kinderarzt",),
     },
     {
         "source": "116117",
@@ -35,6 +36,7 @@ LIFE_SOURCE_CANDIDATES = (
         "theme": "116117: Bereitschaftsdienst oder Notruf 112",
         "topic": "判断什么时候打 116117，什么时候打 112",
         "keywords": ("116117", "112", "bereitschaftsdienst", "beschwerden", "praxis", "notfall"),
+        "history_topics": ("116117 / Facharzttermin",),
     },
     {
         "source": "Familienportal des Bundes",
@@ -42,6 +44,7 @@ LIFE_SOURCE_CANDIDATES = (
         "theme": "Elterngeld beantragen",
         "topic": "申请 Elterngeld 时要注意时间和材料",
         "keywords": ("elterngeld", "antrag", "geburt", "lebensmonate", "beantragen"),
+        "history_topics": ("Elterngeld",),
     },
 )
 
@@ -225,9 +228,29 @@ def dw_slow_news_candidates(limit: int = 12) -> list[str]:
     return urls[:limit]
 
 
-def choose_dw_slow_news(minimum_chars: int, require_audio: bool, skip_url: str | None = None) -> dict:
+def recent_values(history: list[dict], key: str, limit: int = 10) -> set[str]:
+    return {
+        str(entry.get(key, "")).casefold()
+        for entry in history[-limit:]
+        if entry.get(key)
+    }
+
+
+def choose_dw_slow_news(
+    minimum_chars: int,
+    require_audio: bool,
+    skip_url: str | None = None,
+    history: list[dict] | None = None,
+    history_keys: tuple[str, ...] = ("listening_link", "news_link"),
+) -> dict:
+    recently_used: set[str] = set()
+    if history:
+        for key in history_keys:
+            recently_used.update(recent_values(history, key, limit=14))
     for url in dw_slow_news_candidates():
         if skip_url and url == skip_url:
+            continue
+        if url.casefold() in recently_used:
             continue
         article = dw_article_from_url(url)
         if not article:
@@ -236,6 +259,14 @@ def choose_dw_slow_news(minimum_chars: int, require_audio: bool, skip_url: str |
             continue
         if quality_ok(article["sections"], minimum_chars):
             return article
+    if recently_used:
+        return choose_dw_slow_news(
+            minimum_chars,
+            require_audio,
+            skip_url=skip_url,
+            history=None,
+            history_keys=history_keys,
+        )
     raise RuntimeError("No complete DW slow-news article passed quality checks.")
 
 
@@ -269,18 +300,42 @@ def deutschlandfunk_teaser_article(url: str) -> dict | None:
     return {"source": "Nachrichtenleicht", "title": paragraphs[0][:80], "url": url, "sections": sections, "audio_url": ""}
 
 
-def choose_reading_article(preferred: dict | None = None, skip_url: str | None = None) -> dict:
-    if preferred and quality_ok(preferred["sections"], 500):
+def choose_reading_article(
+    preferred: dict | None = None,
+    skip_url: str | None = None,
+    history: list[dict] | None = None,
+) -> dict:
+    recent_news = recent_values(history or [], "news_link", limit=14)
+    if preferred and preferred["url"].casefold() not in recent_news and quality_ok(preferred["sections"], 500):
         return {**preferred, "audio_url": ""}
     # Nachrichtenleicht is intentionally probed but not accepted here yet: the current
     # pages often mix teaser text with Deutschlandfunk navigation/topic blocks. That is
     # worse than switching sources, so use the full-text DW fallback.
     _ = nachrichtenleicht_candidates()
-    return choose_dw_slow_news(500, require_audio=False, skip_url=skip_url)
+    return choose_dw_slow_news(500, require_audio=False, skip_url=skip_url, history=history, history_keys=("news_link",))
 
 
-def choose_life_article() -> dict:
-    for candidate in LIFE_SOURCE_CANDIDATES:
+def choose_life_article(history: list[dict]) -> dict:
+    raw_index = os.getenv("DEUTSCH_LIFE_INDEX", "").strip()
+    ordered = list(LIFE_SOURCE_CANDIDATES)
+    if raw_index.isdigit():
+        index = int(raw_index) % len(ordered)
+        ordered = ordered[index:] + ordered[:index]
+    else:
+        used = recent_values(history, "life_url", limit=len(ordered))
+        recent_topics = {
+            str(entry.get("life_topic") or entry.get("topic") or "").casefold()
+            for entry in history[-len(ordered):]
+        }
+        fresh = [
+            candidate
+            for candidate in ordered
+            if candidate["url"].casefold() not in used
+            and not any(topic in recent_topics for topic in (value.casefold() for value in candidate.get("history_topics", ())))
+        ]
+        if fresh:
+            ordered = fresh
+    for candidate in ordered:
         paragraphs, error = extract_article_paragraphs(candidate["url"], None)
         if error:
             continue
@@ -330,6 +385,8 @@ def choose_scenario_for_life(life: dict, history: list[dict], weekend: bool = Fa
     elif "kita" in haystack:
         preferred_topic = "Kita / Eingewöhnung"
     elif "bürgeramt" in haystack:
+        preferred_topic = "Bürgeramt"
+    elif "elterngeld" in haystack or "antrag" in haystack:
         preferred_topic = "Bürgeramt"
     if preferred_topic:
         for scenario in base.SCENARIOS:
@@ -653,10 +710,10 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
     subject = f"{display_title} - {date}"
     page_url = page_link_for(date, page_base)
 
-    life = choose_life_article()
+    life = choose_life_article(history)
     scenario = choose_scenario_for_life(life, history, weekend=weekend)
-    listening = choose_dw_slow_news(300, require_audio=True)
-    reading = choose_reading_article(preferred=listening)
+    listening = choose_dw_slow_news(300, require_audio=True, history=history, history_keys=("listening_link",))
+    reading = choose_reading_article(preferred=listening, history=history)
     life_flat = life["paragraphs"]
     listening_flat = flatten_sections(listening["sections"])
     reading_flat = flatten_sections(reading["sections"])
@@ -806,6 +863,9 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
         "date": date,
         "mode": mode,
         "topic": scenario["topic"],
+        "life_topic": life["topic"],
+        "life_source": life["source"],
+        "life_url": life["url"],
         "news_title": reading["title"],
         "news_link": reading["url"],
         "listening_title": listening["title"],
