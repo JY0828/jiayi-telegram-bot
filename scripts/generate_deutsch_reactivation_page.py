@@ -601,6 +601,58 @@ def translate_required(paragraphs: list[str], label: str) -> list[str]:
     return translated
 
 
+def openai_brief_summary(title: str, text: str, label: str) -> str | None:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return None
+    model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+    prompt = (
+        f"请根据下面德语正文，用中文概括“{label}”的真实内容。"
+        "要求：只写一句话，45-70个中文字符；必须说清发生了什么/讨论什么；"
+        "不要只复述标题，不要写学习建议，不要扩写背景。\n\n"
+        f"标题：{title}\n\n正文：{text[:5000]}"
+    )
+    payload = json.dumps(
+        {
+            "model": model,
+            "input": [{"role": "user", "content": [{"type": "input_text", "text": prompt}]}],
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        "https://api.openai.com/v1/responses",
+        data=payload,
+        method="POST",
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=45) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError):
+        return None
+    summary = data.get("output_text", "").strip()
+    if not summary:
+        chunks: list[str] = []
+        for item in data.get("output", []):
+            for content in item.get("content", []):
+                if content.get("type") in {"output_text", "text"} and content.get("text"):
+                    chunks.append(content["text"])
+        summary = " ".join(chunks).strip()
+    summary = re.sub(r"^[\"“]|[\"”]$", "", summary.strip())
+    return summary or None
+
+
+def fallback_brief_summary(translated: list[str], title: str) -> str:
+    for paragraph in translated:
+        text = base.clean_text(paragraph)
+        if len(text) >= 25:
+            sentence = re.split(r"(?<=[。！？；])", text)[0].strip()
+            if len(sentence) < 25:
+                sentence = text
+            return sentence[:68].rstrip("，。；、 ") + "。"
+    return f"本模块围绕 {title} 的正文内容展开。"
+
+
 def flatten_sections(sections: list[dict]) -> list[str]:
     paragraphs: list[str] = []
     for section in sections:
@@ -694,6 +746,58 @@ STOPWORDS = {
     "zur",
 }
 
+SIMPLE_VOCAB = {
+    "abkommen",
+    "antrag",
+    "audio",
+    "china",
+    "deutschland",
+    "eu",
+    "frankreich",
+    "geburt",
+    "gespräche",
+    "iran",
+    "jordanien",
+    "kind",
+    "kindes",
+    "kinder",
+    "prozent",
+    "regierung",
+    "russland",
+    "sonntag",
+    "telefonnummer",
+    "trump",
+    "usa",
+    "irangesprächen",
+    "usairangesprächen",
+    "usvizepräsident",
+    "usa-iran-gesprächen",
+    "us-vizepräsident",
+}
+
+ADVANCED_SUFFIXES = (
+    "anspruch",
+    "behörde",
+    "beschränkung",
+    "fähigkeit",
+    "frist",
+    "gelder",
+    "gesetz",
+    "hilfe",
+    "kanal",
+    "kapazität",
+    "leistung",
+    "maßnahmen",
+    "pflicht",
+    "regelung",
+    "sanktion",
+    "stelle",
+    "verfahren",
+    "vereinbarung",
+    "versorgung",
+    "zuständigkeit",
+)
+
 KNOWN_EXPRESSION_PATTERNS = (
     (r"\bAntrag auf Elterngeld\b.*\bstellen\b", "den Antrag auf Elterngeld stellen"),
     (r"\bElterngeld\b.*\bdigital\b.*\bbeantragen\b", "Elterngeld digital beantragen"),
@@ -701,8 +805,8 @@ KNOWN_EXPRESSION_PATTERNS = (
     (r"\bFormular Ihres Bundeslandes\b", "das Formular des Bundeslandes nutzen"),
     (r"\brückwirkend gezahlt\b", "rückwirkend gezahlt werden"),
     (r"\bSchritt für Schritt\b", "Schritt für Schritt"),
-    (r"\bnimmt Fahrt auf\b", "Fahrt aufnehmen"),
-    (r"\bAbkommen\b.*\berzielen\b", "ein Abkommen erzielen"),
+    (r"\bnehm(?:en|e|t)? Fahrt auf\b", "Fahrt aufnehmen"),
+    (r"\bAbkommen\b.*\bzu erzielen\b|\bAbkommen\b.*\berzielen\b", "ein Abkommen erzielen"),
     (r"\bauf Arbeitsebene\b", "auf Arbeitsebene"),
     (r"\bhatten\b.*\bstattgefunden\b|\bhätten\b.*\bstattgefunden\b", "stattfinden"),
     (r"\bzu einem Scheitern\b.*\bführten\b|\bzu einem Scheitern\b.*\bführen\b", "zu einem Scheitern führen"),
@@ -714,6 +818,19 @@ KNOWN_EXPRESSION_PATTERNS = (
     (r"\bdurchgeführt\b.*\bwerden\b|\bdurchgeführt\b", "durchgeführt werden"),
     (r"\bfortschritte\b.*\brechnen\b|\brechnet\b.*\bmit\b.*\bFortschritten\b", "mit Fortschritten rechnen"),
     (r"\bfest im Griff\b", "etwas fest im Griff haben"),
+    (r"\bSanktionen\b.*\bverschärfen\b", "Sanktionen verschärfen"),
+    (r"\bUnterstützung\b.*\bbewältigen\b", "Unterstützung leisten, um etwas zu bewältigen"),
+    (r"\bAbhängigkeit\b.*\bverringern\b", "Abhängigkeit verringern"),
+    (r"\bImport-Obergrenze\b", "eine Import-Obergrenze festlegen"),
+    (r"\bmit sofortiger Wirkung\b", "mit sofortiger Wirkung in Kraft treten"),
+    (r"\bRahmenabkommen\b.*\bunterzeichnet\b", "ein Rahmenabkommen unterzeichnen"),
+    (r"\bSeeblockade\b.*\baufheben\b", "eine Seeblockade aufheben"),
+    (r"\bWirtschaftssanktionen\b.*\bverlängert\b|\bverlängert\b.*\bWirtschaftssanktionen\b", "Wirtschaftssanktionen verlängern"),
+    (r"\bentsprechende Entscheidung\b.*\btrafen\b|\bEntscheidung\b.*\btreffen\b", "eine Entscheidung treffen"),
+    (r"\bBereitschaft zum Frieden\b.*\bzeigen\b", "Bereitschaft zum Frieden zeigen"),
+    (r"\bfordert(?:e|en)?\b.*\bnachdrücklich auf\b", "jemanden nachdrücklich auffordern"),
+    (r"\bReise\b.*\bsagt\b.*\bab\b|\bsagt\b.*\bReise\b.*\bab\b", "eine Reise absagen"),
+    (r"\bZiele zur Verringerung\b.*\bsetzten\b|\bZiele zur Verringerung\b.*\bsetzen\b", "Ziele zur Verringerung setzen"),
 )
 
 KNOWN_CN = {
@@ -739,6 +856,26 @@ KNOWN_CN = {
     "vorgesehen": "原本计划；规定",
     "wahlbehörde": "选举管理机构",
     "wetterdienst": "气象局；气象服务机构",
+    "abhängigkeit": "依赖性",
+    "angriffskrieg": "侵略战争",
+    "auszählung": "计票",
+    "bereitschaftsdienst": "值班医疗服务",
+    "dauermagneten": "永磁体",
+    "einfuhr": "进口",
+    "einfuhren": "进口商品；进口量",
+    "einsatzleiter": "行动负责人；现场负责人",
+    "führungswahl": "党内领导权选举",
+    "gipfeltreffen": "峰会",
+    "import-obergrenze": "进口上限",
+    "lieferland": "供应国",
+    "lieferungen": "交付；供应",
+    "rahmenabkommen": "框架协议",
+    "rohstoffeinfuhren": "原材料进口",
+    "rüstungsgütern": "军备物资",
+    "seeblockade": "海上封锁",
+    "seltene erden": "稀土",
+    "unterstützung": "支持；援助",
+    "zuständig": "负责的；有管辖权的",
 }
 
 KNOWN_EXPRESSION_CN = {
@@ -761,6 +898,19 @@ KNOWN_EXPRESSION_CN = {
     "stattfinden": "举行；发生",
     "wegen der tötung verurteilt werden": "因杀害行为被判刑",
     "zu einem scheitern führen": "导致失败",
+    "abhängigkeit verringern": "降低依赖",
+    "eine import-obergrenze festlegen": "设定进口上限",
+    "ein rahmenabkommen unterzeichnen": "签署框架协议",
+    "mit sofortiger wirkung in kraft treten": "立即生效",
+    "sanktionen verschärfen": "加重/收紧制裁",
+    "unterstützung leisten, um etwas zu bewältigen": "提供支持以应对某事",
+    "eine seeblockade aufheben": "解除海上封锁",
+    "wirtschaftssanktionen verlängern": "延长经济制裁",
+    "eine entscheidung treffen": "作出决定",
+    "bereitschaft zum frieden zeigen": "表现出和平意愿",
+    "jemanden nachdrücklich auffordern": "强烈敦促某人",
+    "eine reise absagen": "取消行程",
+    "ziele zur verringerung setzen": "设定降低/减少的目标",
 }
 
 
@@ -774,6 +924,58 @@ def split_sentences(text: str) -> list[str]:
 
 def normalize_learning_key(value: str) -> str:
     return re.sub(r"[^a-zäöüß0-9]+", "", value.casefold())
+
+
+def vocabulary_level_score(word: str) -> int:
+    normalized = word.casefold().strip(" .,:;!?()[]")
+    normalized_key = normalize_learning_key(normalized)
+    if not normalized_key or normalized_key in SIMPLE_VOCAB or normalized_key in STOPWORDS:
+        return -20
+    parts = re.split(r"[\s-]+", normalized)
+    score = 0
+    if " " in normalized or "-" in normalized:
+        score += 5
+    if len(normalized_key) >= 12:
+        score += 4
+    elif len(normalized_key) >= 9:
+        score += 2
+    if any(suffix in normalized for suffix in ADVANCED_SUFFIXES):
+        score += 5
+    if re.search(r"(ung|heit|keit|schaft|tion|tät|nis|nahme|wende|grenze|blockade|kommen)$", normalized):
+        score += 4
+    if re.search(r"(staat|bundes|regierung|wirtschaft|verkehr|gesundheit|eltern|bereitschaft|kommunikation|versorgung)", normalized):
+        score += 3
+    if normalized[:1].isupper():
+        score += 1
+    if re.fullmatch(r"[A-ZÄÖÜ][a-zäöüß]+", word.strip()) and score < 5:
+        score -= 3
+    return score
+
+
+def is_c1_vocab_candidate(word: str) -> bool:
+    return vocabulary_level_score(word) >= 4
+
+
+def expression_level_score(phrase: str) -> int:
+    normalized = phrase.casefold().strip(" .,:;!?()[]")
+    if not normalized or len(normalized.split()) < 2:
+        return -10
+    score = 0
+    if any(marker in normalized for marker in (" in kraft ", " zur verfügung ", " anspruch auf", "antrag auf", "nach angaben", "im rahmen", "mit sofortiger wirkung")):
+        score += 5
+    if re.search(r"\b(?:stellen|beantragen|leisten|verschärfen|verlängern|verringern|bewältigen|unterzeichnen|aufheben|eindämmen|bekanntgeben|ankündigen|fordern|auffordern|vereinbaren|erzielen|treffen|zeigen|absagen|aufnehmen|einrichten|zuständig sein|in kraft treten)\b", normalized):
+        score += 4
+    if re.search(r"\b(?:maßnahmen|sanktionen|rahmenabkommen|entscheidung|abhängigkeit|unterstützung|bereitschaft|obergrenze|zuständigkeit|leistungen)\b", normalized):
+        score += 3
+    if len(normalized) >= 22:
+        score += 1
+    if normalized.startswith(("der ", "die ", "das ", "ein ", "eine ")) and not re.search(r"\b(?:stellen|treffen|leisten|zeigen|unterzeichnen|aufheben|verschärfen|verlängern|verringern|erzielen|einrichten)\b", normalized):
+        score -= 2
+    return score
+
+
+def is_expression_candidate(phrase: str) -> bool:
+    return expression_level_score(phrase) >= 4
 
 
 def guess_pos(word: str) -> str:
@@ -809,6 +1011,10 @@ def openai_learning_items(text: str, module: str, vocab_limit: int, expr_limit: 
 硬性要求：
 - 词汇和表达必须来自这段正文，不能使用旧模板、通用列表或外部材料。
 - 三个模块会分别调用你，因此不要补充其他模块的内容。
+- 按“曾经 C1、现在恢复德国真实阅读能力”的标准选择，不要选 A1-B1 基础词。
+- 词汇优先选择：复合名词、名词化结构、政策/行政/法律/医疗/经济/新闻中高频词、能决定原文理解的抽象词。
+- 表达优先选择：Funktionsverbgefüge、固定介词搭配、新闻报道固定说法、行政/法律/政策常用句式。
+- 避免选择：国家名、人名、星期、普通数字词、Prozent、Antrag、Kind、Gespräch 这类单独出现时过于基础的词；如果必须选，要扩展成原文里的完整搭配。
 - 返回 JSON 对象，格式：
 {{
   "vocab": [
@@ -819,7 +1025,7 @@ def openai_learning_items(text: str, module: str, vocab_limit: int, expr_limit: 
   ]
 }}
 - vocab 最多 {vocab_limit} 个，expressions 最多 {expr_limit} 个。
-- 优先选择能帮助用户看懂德国真实生活、新闻、医疗、育儿、行政内容的项目。
+- 优先选择能帮助用户看懂德国真实生活、新闻、医疗、育儿、行政内容的 C1 级项目。
 
 德语正文：
 {clipped}
@@ -869,6 +1075,8 @@ def normalize_vocab_rows(rows: list[dict], text: str, limit: int) -> list[dict]:
         word = str(row.get("word", "")).strip()
         if not word:
             continue
+        if not is_c1_vocab_candidate(word):
+            continue
         key = normalize_learning_key(word)
         if key in seen:
             continue
@@ -897,6 +1105,8 @@ def normalize_expression_rows(rows: list[dict], text: str, limit: int) -> list[d
         de = str(row.get("de", "")).strip()
         if not de:
             continue
+        if not is_expression_candidate(de):
+            continue
         key = normalize_learning_key(de)
         if key in seen:
             continue
@@ -917,16 +1127,29 @@ def normalize_expression_rows(rows: list[dict], text: str, limit: int) -> list[d
 
 
 def fallback_vocab_rows(text: str, limit: int) -> list[dict]:
-    words = re.findall(r"\b[A-ZÄÖÜ][A-Za-zÄÖÜäöüß-]{4,}\b|\b[a-zäöüß-]{7,}\b", text)
+    noun_phrases = re.findall(
+        r"\b(?:[A-ZÄÖÜ][A-Za-zÄÖÜäöüß-]+(?:-[A-ZÄÖÜA-Za-zÄÖÜäöüß]+)*\s+){0,2}"
+        r"[A-ZÄÖÜ][A-Za-zÄÖÜäöüß-]*(?:-[A-ZÄÖÜA-Za-zÄÖÜäöüß]+)+\b",
+        text,
+    )
+    compounds = re.findall(r"\b[A-ZÄÖÜ][A-Za-zÄÖÜäöüß-]{8,}\b|\b[a-zäöüß-]{10,}\b", text)
+    words = [*noun_phrases, *compounds]
     counts: dict[str, int] = {}
     display: dict[str, str] = {}
     for word in words:
-        key = word.casefold().strip("-")
-        if key in STOPWORDS or len(key) < 5 or key.endswith(("es", "en")) and key[:-2] in STOPWORDS:
+        word = base.clean_text(word).strip("- ")
+        key = word.casefold()
+        if not is_c1_vocab_candidate(word):
+            continue
+        if key.endswith(("es", "en")) and key[:-2] in STOPWORDS:
             continue
         counts[key] = counts.get(key, 0) + 1
-        display.setdefault(key, word.strip("-"))
-    ranked = sorted(counts, key=lambda key: (counts[key], display[key][:1].isupper(), len(display[key])), reverse=True)
+        display.setdefault(key, word)
+    ranked = sorted(
+        counts,
+        key=lambda key: (vocabulary_level_score(display[key]), counts[key], len(display[key])),
+        reverse=True,
+    )
     picked = [display[key] for key in ranked[:limit]]
     translations = translate_required(picked, "content vocabulary") if picked else []
     rows = []
@@ -950,10 +1173,10 @@ def fallback_vocab_rows(text: str, limit: int) -> list[dict]:
 
 def fallback_expression_rows(text: str, limit: int, module: str) -> list[dict]:
     patterns = (
-        r"\b(?:Anspruch auf|Antrag auf|Hilfe bei|Informationen zu|Informationen über|in der Nähe|bei Bedarf|rund um die Uhr)\b[^.!?]{0,60}",
-        r"\b(?:einen|eine|den|die|das)\s+[A-ZÄÖÜ][\wÄÖÜäöüß-]+(?:\s+[A-ZÄÖÜ][\wÄÖÜäöüß-]+)?\s+(?:stellen|beantragen|erhalten|bekommen|vereinbaren|absagen|vorlegen|einreichen|prüfen|ausfüllen|wählen|aufsuchen)",
-        r"\b(?:sich|Sie|man)\s+(?:an|auf|bei|für|mit|um)\s+[^.!?]{8,70}",
-        r"\b(?:zur Verfügung stehen|zur Verfügung stellen|in Kraft treten|auf den Weg machen|Bescheid geben)\b[^.!?]{0,60}",
+        r"\b(?:Anspruch auf|Antrag auf|Hilfe bei|Informationen zu|Informationen über)\s+[A-ZÄÖÜa-zäöüß-]+(?:\s+[A-ZÄÖÜa-zäöüß-]+){0,3}",
+        r"\b(?:einen|eine|den|die|das)\s+[A-ZÄÖÜ][\wÄÖÜäöüß-]+(?:\s+[A-ZÄÖÜ][\wÄÖÜäöüß-]+)?\s+(?:stellen|beantragen|vereinbaren|absagen|vorlegen|einreichen|prüfen|ausfüllen|wählen|aufsuchen|treffen|leisten|verschärfen|verringern|unterzeichnen|aufheben)",
+        r"\bsich an die [A-ZÄÖÜ][\wÄÖÜäöüß-]+(?:\s+[A-ZÄÖÜ][\wÄÖÜäöüß-]+)?\s+wenden\b",
+        r"\b(?:zur Verfügung stehen|zur Verfügung stellen|in Kraft treten|mit sofortiger Wirkung|nach Angaben|im Rahmen von|Bereitschaft zum Frieden zeigen)\b",
     )
     candidates: list[tuple[str, str]] = []
     for sentence in split_sentences(text):
@@ -963,26 +1186,15 @@ def fallback_expression_rows(text: str, limit: int, module: str) -> list[dict]:
         for pattern in patterns:
             for match in re.finditer(pattern, sentence, flags=re.I):
                 phrase = base.clean_text(match.group(0)).strip(" ,;:")
-                if len(phrase.split()) > 8:
-                    phrase = " ".join(phrase.split()[:8])
-                if len(phrase.split()) >= 2:
+                if phrase.casefold().startswith("antrag auf "):
+                    continue
+                if is_expression_candidate(phrase):
                     candidates.append((phrase, sentence))
-    if len(candidates) < limit:
-        for sentence in split_sentences(text):
-            words = sentence.split()
-            for idx, word in enumerate(words[:-2]):
-                if word[:1].isupper() and normalize_learning_key(word) not in STOPWORDS:
-                    phrase = " ".join(words[max(0, idx - 1) : min(len(words), idx + 4)]).strip(" ,;:")
-                    if 2 <= len(phrase.split()) <= 6:
-                        candidates.append((phrase, sentence))
-                    break
-            if len(candidates) >= limit * 2:
-                break
     rows: list[dict] = []
     seen: set[str] = set()
     for phrase, example in candidates:
         key = normalize_learning_key(phrase)
-        if not key or key in seen:
+        if not key or key in seen or not is_expression_candidate(phrase):
             continue
         seen.add(key)
         rows.append({"de": phrase, "example": example})
@@ -1127,9 +1339,17 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
     life_translation_html = translated_html(life_flat, life_translation)
     listening_translation_html = translated_html(listening_flat, listening_translation)
     reading_translation_html = translated_html(reading_flat, reading_translation)
+    listening_summary = openai_brief_summary(listening["title"], listening_text, "今日听力") or fallback_brief_summary(
+        listening_translation,
+        listening["title"],
+    )
+    reading_summary = openai_brief_summary(reading["title"], reading_text, "今日阅读") or fallback_brief_summary(
+        reading_translation,
+        reading["title"],
+    )
+    life_summary = f"生活场景聚焦{life['theme']}，练习德国真实页面里的行政/医疗/育儿表达。"
     top_intro = (
-        f"生活场景看{life['theme']}；听力训练听 {listening['title']}；"
-        f"阅读部分拆解 {reading['title']}。今天重点是用原文、译文和固定搭配快速读懂真实德国内容。"
+        f"{life_summary} 听力讲：{listening_summary} 阅读讲：{reading_summary}"
     )
 
     page_body = f"""
@@ -1153,7 +1373,7 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
   <p><b>{h(listening['title'])}</b></p>
   <p>音频链接：<a href="{h(listening['audio_url'])}">{h(listening['audio_url'])}</a></p>
   <p>正文来源：<a href="{h(listening['url'])}">{h(listening['url'])}</a></p>
-  {details("内容导读", "<p>这是一段慢速新闻材料，适合先看全文和译文，再带着关键词去听音频。重点不是背新闻，而是训练你快速识别德国公共语境里的机构、动作和影响。</p>", True)}
+  {details("内容导读", f"<p>{h(listening_summary)}</p><p>这是一段慢速新闻材料，适合先看全文和译文，再带着关键词去听音频。重点不是背新闻，而是训练你快速识别德国公共语境里的机构、动作和影响。</p>", True)}
   {details("完整德语正文", sections_html(listening["sections"]), True)}
   {details("逐段中文翻译", f"<div class='zh'>{listening_translation_html}</div>", True)}
   {details("关键句 8-12 句", listening_key_html, False)}
@@ -1169,7 +1389,7 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
   {details("逐段中文翻译", f"<div class='zh'>{reading_translation_html}</div>", True)}
   {details("重点词汇", vocab_blocks(reading_vocab), False)}
   {details("高频表达", expr_blocks(reading_expr), False)}
-  {details("德国生活背景解释", "<p>这类材料适合恢复德国公共生活阅读能力：先抓机构、动作和影响，再看原因与后果。遇到政策、医疗、教育和行政词时，优先理解它在德国生活中的实际作用。</p>", True)}
+  {details("德国生活背景解释", f"<p>{h(reading_summary)}</p><p>这类材料适合恢复德国公共生活阅读能力：先抓机构、动作和影响，再看原因与后果。遇到政策、医疗、教育和行政词时，优先理解它在德国生活中的实际作用。</p>", True)}
 </section>
 """
     page_html = build_page(subject, page_body)
