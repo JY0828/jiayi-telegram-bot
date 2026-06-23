@@ -1,1 +1,1 @@
-﻿2026-06-22T09:19:52.3662232+02:00
+2026-06-23T00:00:00+02:00 module-specific-learning-items-telegram-test
