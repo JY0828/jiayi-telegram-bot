@@ -306,7 +306,12 @@ def choose_reading_article(
     history: list[dict] | None = None,
 ) -> dict:
     recent_news = recent_values(history or [], "news_link", limit=14)
-    if preferred and preferred["url"].casefold() not in recent_news and quality_ok(preferred["sections"], 500):
+    if (
+        preferred
+        and not skip_url
+        and preferred["url"].casefold() not in recent_news
+        and quality_ok(preferred["sections"], 500)
+    ):
         return {**preferred, "audio_url": ""}
     # Nachrichtenleicht is intentionally probed but not accepted here yet: the current
     # pages often mix teaser text with Deutschlandfunk navigation/topic blocks. That is
@@ -633,41 +638,377 @@ def sentence_rows_from_paragraphs(paragraphs: list[str], limit: int = 12) -> lis
     return [{"de": s, "cn": cn} for s, cn in zip(picked, translations)]
 
 
-def dynamic_vocab(helpers: list[dict], paragraphs: list[str]) -> list[dict]:
-    words = sum(len(p.split()) for p in paragraphs)
-    limit = 10 if words < 350 else 15 if words < 900 else 20
-    minimum = 8 if words < 350 else 10 if words < 900 else 15
-    return base.expanded_vocabulary_rows(helpers, minimum=minimum, limit=limit)
+STOPWORDS = {
+    "aber",
+    "alle",
+    "auch",
+    "auf",
+    "aus",
+    "bei",
+    "bis",
+    "das",
+    "dem",
+    "den",
+    "der",
+    "des",
+    "die",
+    "ein",
+    "eine",
+    "einem",
+    "einen",
+    "einer",
+    "eines",
+    "für",
+    "hat",
+    "haben",
+    "hier",
+    "ich",
+    "ihm",
+    "ihr",
+    "ihre",
+    "ihren",
+    "ihres",
+    "im",
+    "in",
+    "ist",
+    "mit",
+    "nach",
+    "nicht",
+    "noch",
+    "oder",
+    "sich",
+    "sie",
+    "sind",
+    "und",
+    "von",
+    "vor",
+    "war",
+    "wenn",
+    "wer",
+    "wie",
+    "wir",
+    "wird",
+    "werden",
+    "zu",
+    "zum",
+    "zur",
+}
+
+KNOWN_EXPRESSION_PATTERNS = (
+    (r"\bAntrag auf Elterngeld\b.*\bstellen\b", "den Antrag auf Elterngeld stellen"),
+    (r"\bElterngeld\b.*\bdigital\b.*\bbeantragen\b", "Elterngeld digital beantragen"),
+    (r"\bwenden Sie sich an die Elterngeldstelle\b", "sich an die Elterngeldstelle wenden"),
+    (r"\bFormular Ihres Bundeslandes\b", "das Formular des Bundeslandes nutzen"),
+    (r"\brückwirkend gezahlt\b", "rückwirkend gezahlt werden"),
+    (r"\bSchritt für Schritt\b", "Schritt für Schritt"),
+    (r"\bnimmt Fahrt auf\b", "Fahrt aufnehmen"),
+    (r"\bAbkommen\b.*\berzielen\b", "ein Abkommen erzielen"),
+    (r"\bauf Arbeitsebene\b", "auf Arbeitsebene"),
+    (r"\bhatten\b.*\bstattgefunden\b|\bhätten\b.*\bstattgefunden\b", "stattfinden"),
+    (r"\bzu einem Scheitern\b.*\bführten\b|\bzu einem Scheitern\b.*\bführen\b", "zu einem Scheitern führen"),
+    (r"\bKommunikationskanals?\b.*\beinrichtung\b|\bEinrichtung eines Kommunikationskanals\b", "einen Kommunikationskanal einrichten"),
+    (r"\bwurde(?:n)?\b.*\bhingerichtet\b", "hingerichtet werden"),
+    (r"\bbekanntgab\b|\bbekanntgegeben\b", "bekanntgeben"),
+    (r"\bwegen der Tötung\b", "wegen der Tötung verurteilt werden"),
+    (r"\bin Todeszellen\b", "in Todeszellen sitzen"),
+    (r"\bdurchgeführt\b.*\bwerden\b|\bdurchgeführt\b", "durchgeführt werden"),
+    (r"\bfortschritte\b.*\brechnen\b|\brechnet\b.*\bmit\b.*\bFortschritten\b", "mit Fortschritten rechnen"),
+    (r"\bfest im Griff\b", "etwas fest im Griff haben"),
+)
+
+KNOWN_CN = {
+    "abkommen": "协议",
+    "antrag": "申请；申请表",
+    "beratungen": "磋商；商议",
+    "bundesland": "联邦州",
+    "bundesländern": "各联邦州",
+    "elterngeld": "父母津贴",
+    "elterngelddigital": "ElterngeldDigital 线上申请系统",
+    "elterngeldstelle": "父母津贴办公室",
+    "formular": "表格",
+    "fortschritte": "进展",
+    "geburt": "出生；分娩",
+    "gespräche": "会谈；沟通",
+    "hinrichtungen": "处决",
+    "lebensmonate": "出生后的月龄",
+    "prozent": "百分比",
+    "pünktlichkeit": "准点率；准时性",
+    "russland-sanktionen": "对俄罗斯制裁",
+    "sanktionen": "制裁措施",
+    "todesstrafe": "死刑",
+    "vorgesehen": "原本计划；规定",
+    "wahlbehörde": "选举管理机构",
+    "wetterdienst": "气象局；气象服务机构",
+}
+
+KNOWN_EXPRESSION_CN = {
+    "auf arbeitsebene": "在工作层面",
+    "bekanntgeben": "宣布；公布",
+    "das formular des bundeslandes nutzen": "使用所在联邦州的表格",
+    "den antrag auf elterngeld stellen": "提交父母津贴申请",
+    "durchgeführt werden": "被执行；被实施",
+    "ein abkommen erzielen": "达成协议",
+    "einen kommunikationskanal einrichten": "建立沟通渠道",
+    "elterngeld digital beantragen": "在线申请父母津贴",
+    "etwas fest im griff haben": "牢牢控制住某种局面",
+    "fahrt aufnehmen": "开始加速；取得进展",
+    "hingerichtet werden": "被处决",
+    "in todeszellen sitzen": "被关押在死囚牢房",
+    "mit fortschritten rechnen": "预期会有进展",
+    "rückwirkend gezahlt werden": "被追溯支付",
+    "schritt für schritt": "一步一步地",
+    "sich an die elterngeldstelle wenden": "联系父母津贴办公室",
+    "stattfinden": "举行；发生",
+    "wegen der tötung verurteilt werden": "因杀害行为被判刑",
+    "zu einem scheitern führen": "导致失败",
+}
 
 
-def vocab_from_text(text: str, limit: int) -> list[dict]:
-    helpers = [item for item in base.VOCAB_CANDIDATES if base.matches_helper(item, text.casefold())]
-    return dynamic_vocab(helpers, [text])[:limit]
+def split_sentences(text: str) -> list[str]:
+    return [
+        s.strip()
+        for s in re.split(r"(?<=[.!?])\s+", text)
+        if len(s.strip()) >= 45 and len(s.split()) >= 6
+    ]
 
 
-def unique_takeaways(primary: list[dict], extras: list[dict], limit: int = 3) -> list[dict]:
-    rows: list[dict] = []
+def normalize_learning_key(value: str) -> str:
+    return re.sub(r"[^a-zäöüß0-9]+", "", value.casefold())
+
+
+def guess_pos(word: str) -> str:
+    core = re.sub(r"^(der|die|das|ein|eine|einen|einem|einer)\s+", "", word.strip(), flags=re.I)
+    if core[:1].isupper():
+        return "名词"
+    if re.search(r"(ung|heit|keit|schaft|tion|tät|nis)$", core, re.I):
+        return "名词"
+    if re.search(r"(en|ern|ieren)$", core, re.I):
+        return "动词"
+    if re.search(r"(lich|isch|bar|ig|los)$", core, re.I):
+        return "形容词"
+    return "表达/词组"
+
+
+def find_example(text: str, needle: str) -> str:
+    needle_key = normalize_learning_key(needle)
+    for sentence in split_sentences(text):
+        if needle_key and needle_key in normalize_learning_key(sentence):
+            return sentence
+    return split_sentences(text)[0] if split_sentences(text) else text[:180].strip()
+
+
+def openai_learning_items(text: str, module: str, vocab_limit: int, expr_limit: int) -> tuple[list[dict], list[dict]] | None:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return None
+    model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+    clipped = text[:9000]
+    prompt = f"""
+请只根据下面这段德语正文，为“{module}”模块抽取学习项。
+
+硬性要求：
+- 词汇和表达必须来自这段正文，不能使用旧模板、通用列表或外部材料。
+- 三个模块会分别调用你，因此不要补充其他模块的内容。
+- 返回 JSON 对象，格式：
+{{
+  "vocab": [
+    {{"word":"德语词或短语","pos":"词性中文","cn":"中文意思","context":"本文中的意思","frequency":"⭐⭐⭐/⭐⭐/⭐","example":"原文例句或贴近原文例句","example_cn":"例句中文翻译"}}
+  ],
+  "expressions": [
+    {{"de":"德语固定搭配或高频表达","cn":"中文意思","scene":"适用场景","example":"原文例句或贴近原文例句","translation":"例句中文翻译"}}
+  ]
+}}
+- vocab 最多 {vocab_limit} 个，expressions 最多 {expr_limit} 个。
+- 优先选择能帮助用户看懂德国真实生活、新闻、医疗、育儿、行政内容的项目。
+
+德语正文：
+{clipped}
+""".strip()
+    payload = json.dumps(
+        {
+            "model": model,
+            "input": [{"role": "user", "content": [{"type": "input_text", "text": prompt}]}],
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        "https://api.openai.com/v1/responses",
+        data=payload,
+        method="POST",
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError):
+        return None
+    raw_text = data.get("output_text", "")
+    if not raw_text:
+        chunks: list[str] = []
+        for item in data.get("output", []):
+            for content in item.get("content", []):
+                if content.get("type") in {"output_text", "text"} and content.get("text"):
+                    chunks.append(content["text"])
+        raw_text = "\n".join(chunks)
+    raw_text = re.sub(r"^```(?:json)?|```$", "", raw_text.strip(), flags=re.MULTILINE).strip()
+    try:
+        parsed = json.loads(raw_text)
+    except json.JSONDecodeError:
+        return None
+    vocab = normalize_vocab_rows(parsed.get("vocab", []), text, vocab_limit)
+    expressions = normalize_expression_rows(parsed.get("expressions", []), text, expr_limit)
+    if not vocab or not expressions:
+        return None
+    return vocab, expressions
+
+
+def normalize_vocab_rows(rows: list[dict], text: str, limit: int) -> list[dict]:
+    out: list[dict] = []
     seen: set[str] = set()
-    for item in [*primary, *extras]:
-        expr = str(item.get("expr") or item.get("de") or item.get("word") or "").strip()
-        if not expr:
+    for row in rows:
+        word = str(row.get("word", "")).strip()
+        if not word:
             continue
-        key = re.sub(r"^(der|die|das|ein|eine)\s+", "", expr.casefold()).strip()
-        key = re.sub(r"\W+", "", key)
+        key = normalize_learning_key(word)
         if key in seen:
             continue
         seen.add(key)
-        rows.append(
+        example = str(row.get("example") or find_example(text, word)).strip()
+        out.append(
             {
-                "expr": expr,
-                "cn": item.get("cn", item.get("meaning", "")),
-                "example": item.get("example", ""),
-                "translation": item.get("translation", ""),
+                "word": word,
+                "pos": str(row.get("pos") or guess_pos(word)).strip(),
+                "cn": str(row.get("cn") or "").strip(),
+                "context": str(row.get("context") or row.get("cn") or "").strip(),
+                "frequency": str(row.get("frequency") or "⭐⭐").strip(),
+                "example": example,
+                "example_cn": str(row.get("example_cn") or "").strip(),
             }
         )
-        if len(rows) >= limit:
-            return rows
+        if len(out) >= limit:
+            break
+    return out
+
+
+def normalize_expression_rows(rows: list[dict], text: str, limit: int) -> list[dict]:
+    out: list[dict] = []
+    seen: set[str] = set()
+    for row in rows:
+        de = str(row.get("de", "")).strip()
+        if not de:
+            continue
+        key = normalize_learning_key(de)
+        if key in seen:
+            continue
+        seen.add(key)
+        example = str(row.get("example") or find_example(text, de)).strip()
+        out.append(
+            {
+                "de": de,
+                "cn": str(row.get("cn") or "").strip(),
+                "scene": str(row.get("scene") or "理解本文和类似德国真实材料").strip(),
+                "example": example,
+                "translation": str(row.get("translation") or "").strip(),
+            }
+        )
+        if len(out) >= limit:
+            break
+    return out
+
+
+def fallback_vocab_rows(text: str, limit: int) -> list[dict]:
+    words = re.findall(r"\b[A-ZÄÖÜ][A-Za-zÄÖÜäöüß-]{4,}\b|\b[a-zäöüß-]{7,}\b", text)
+    counts: dict[str, int] = {}
+    display: dict[str, str] = {}
+    for word in words:
+        key = word.casefold().strip("-")
+        if key in STOPWORDS or len(key) < 5 or key.endswith(("es", "en")) and key[:-2] in STOPWORDS:
+            continue
+        counts[key] = counts.get(key, 0) + 1
+        display.setdefault(key, word.strip("-"))
+    ranked = sorted(counts, key=lambda key: (counts[key], display[key][:1].isupper(), len(display[key])), reverse=True)
+    picked = [display[key] for key in ranked[:limit]]
+    translations = translate_required(picked, "content vocabulary") if picked else []
+    rows = []
+    for word, cn in zip(picked, translations):
+        cn = KNOWN_CN.get(word.casefold(), cn)
+        example = find_example(text, word)
+        example_cn = translate_required([example], "content vocabulary example")[0]
+        rows.append(
+            {
+                "word": word,
+                "pos": guess_pos(word),
+                "cn": cn,
+                "context": cn,
+                "frequency": "⭐⭐⭐" if counts[word.casefold()] > 1 else "⭐⭐",
+                "example": example,
+                "example_cn": example_cn,
+            }
+        )
     return rows
+
+
+def fallback_expression_rows(text: str, limit: int, module: str) -> list[dict]:
+    patterns = (
+        r"\b(?:Anspruch auf|Antrag auf|Hilfe bei|Informationen zu|Informationen über|in der Nähe|bei Bedarf|rund um die Uhr)\b[^.!?]{0,60}",
+        r"\b(?:einen|eine|den|die|das)\s+[A-ZÄÖÜ][\wÄÖÜäöüß-]+(?:\s+[A-ZÄÖÜ][\wÄÖÜäöüß-]+)?\s+(?:stellen|beantragen|erhalten|bekommen|vereinbaren|absagen|vorlegen|einreichen|prüfen|ausfüllen|wählen|aufsuchen)",
+        r"\b(?:sich|Sie|man)\s+(?:an|auf|bei|für|mit|um)\s+[^.!?]{8,70}",
+        r"\b(?:zur Verfügung stehen|zur Verfügung stellen|in Kraft treten|auf den Weg machen|Bescheid geben)\b[^.!?]{0,60}",
+    )
+    candidates: list[tuple[str, str]] = []
+    for sentence in split_sentences(text):
+        for pattern, phrase in KNOWN_EXPRESSION_PATTERNS:
+            if re.search(pattern, sentence, flags=re.I):
+                candidates.append((phrase, sentence))
+        for pattern in patterns:
+            for match in re.finditer(pattern, sentence, flags=re.I):
+                phrase = base.clean_text(match.group(0)).strip(" ,;:")
+                if len(phrase.split()) > 8:
+                    phrase = " ".join(phrase.split()[:8])
+                if len(phrase.split()) >= 2:
+                    candidates.append((phrase, sentence))
+    if len(candidates) < limit:
+        for sentence in split_sentences(text):
+            words = sentence.split()
+            for idx, word in enumerate(words[:-2]):
+                if word[:1].isupper() and normalize_learning_key(word) not in STOPWORDS:
+                    phrase = " ".join(words[max(0, idx - 1) : min(len(words), idx + 4)]).strip(" ,;:")
+                    if 2 <= len(phrase.split()) <= 6:
+                        candidates.append((phrase, sentence))
+                    break
+            if len(candidates) >= limit * 2:
+                break
+    rows: list[dict] = []
+    seen: set[str] = set()
+    for phrase, example in candidates:
+        key = normalize_learning_key(phrase)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        rows.append({"de": phrase, "example": example})
+        if len(rows) >= limit:
+            break
+    phrases = [row["de"] for row in rows]
+    examples = [row["example"] for row in rows]
+    phrase_cn = translate_required(phrases, "content expression") if phrases else []
+    example_cn = translate_required(examples, "content expression example") if examples else []
+    return [
+        {
+            "de": row["de"],
+            "cn": KNOWN_EXPRESSION_CN.get(row["de"].casefold(), cn),
+            "scene": f"{module}材料理解和类似德国真实沟通",
+            "example": row["example"],
+            "translation": ex_cn,
+        }
+        for row, cn, ex_cn in zip(rows, phrase_cn, example_cn)
+    ]
+
+
+def learning_items_from_text(text: str, module: str, vocab_limit: int, expr_limit: int) -> tuple[list[dict], list[dict]]:
+    extracted = openai_learning_items(text, module, vocab_limit, expr_limit)
+    if extracted:
+        return extracted
+    return fallback_vocab_rows(text, vocab_limit), fallback_expression_rows(text, expr_limit, module)
 
 
 def page_link_for(date: str, page_base: str) -> str:
@@ -736,7 +1077,7 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
     life = choose_life_article(history)
     scenario = choose_scenario_for_life(life, history, weekend=weekend)
     listening = choose_dw_slow_news(300, require_audio=True, history=history, history_keys=("listening_link",))
-    reading = choose_reading_article(preferred=listening, history=history)
+    reading = choose_reading_article(preferred=None, skip_url=listening["url"], history=history)
     life_flat = life["paragraphs"]
     listening_flat = flatten_sections(listening["sections"])
     reading_flat = flatten_sections(reading["sections"])
@@ -750,20 +1091,20 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
     listening_translation = translate_required(listening_flat, "listening")
     reading_translation = translate_required(reading_flat, "reading")
 
-    expressions = base.expression_rows(scenario["expressions"])
-    scenario_expr = base.expression_detail_rows(expressions, scenario)
     life_text = " ".join(life_flat)
     listening_text = " ".join(listening_flat)
     reading_text = " ".join(reading_flat)
-    life_vocab = vocab_from_text(life_text, 12)
-    listening_vocab = vocab_from_text(listening_text, 5)
-    reading_vocab = dynamic_vocab(
-        [item for item in base.VOCAB_CANDIDATES if base.matches_helper(item, reading_text.casefold())],
-        reading_flat,
+    life_vocab, life_expr = learning_items_from_text(life_text, "今日生活场景", 12, 8)
+    listening_vocab, listening_expr = learning_items_from_text(listening_text, "今日听力", 8, 8)
+    reading_words = sum(len(p.split()) for p in reading_flat)
+    reading_vocab_limit = 10 if reading_words < 350 else 15 if reading_words < 900 else 20
+    reading_expr_limit = 8 if reading_words < 350 else 12 if reading_words < 900 else 15
+    reading_vocab, reading_expr = learning_items_from_text(
+        reading_text,
+        "今日阅读",
+        reading_vocab_limit,
+        reading_expr_limit,
     )
-    listening_expr = base.news_expression_rows()[:3]
-    reading_expr = base.news_expression_rows()[:12]
-    takeaways = unique_takeaways(scenario_expr, [*life_vocab, *listening_vocab, *reading_vocab])
 
     dialogue = base.dialogue_text(scenario["dialogue"])
     reusable = base.reusable_sentence_rows(scenario)
@@ -779,9 +1120,9 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
     life_translation_html = translated_html(life_flat, life_translation)
     listening_translation_html = translated_html(listening_flat, listening_translation)
     reading_translation_html = translated_html(reading_flat, reading_translation)
-    takeaway_html = "".join(
-        f"<div class='item'><b>{h(item['expr'])}</b><br>中文意思：{h(item['cn'])}<br>例句：{h(item['example'])}<br>中文翻译：{h(item['translation'])}</div>"
-        for item in takeaways
+    top_intro = (
+        f"生活场景看{life['theme']}；听力训练听 {listening['title']}；"
+        f"阅读部分拆解 {reading['title']}。今天重点是用原文、译文和固定搭配快速读懂真实德国内容。"
     )
 
     page_body = f"""
@@ -789,7 +1130,7 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
   <h1>{h(display_title)}</h1>
   <p class="meta">{h(date)}</p>
   <p class="theme">今日主题：{h(life["topic"])}</p>
-  <p>一句话简介：学习德国真实页面里关于{h(life["theme"])}的常用说法，降低今天读懂和开口沟通的成本。</p>
+  <p>一句话简介：{h(top_intro)}</p>
 </header>
 <section>
   <h2>1. 今日生活场景</h2>
@@ -797,7 +1138,7 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
   {details("原始内容", sections_html(life["sections"]), True)}
   {details("中文翻译", f"<div class='zh'>{life_translation_html}</div>", True)}
   {details("重点词汇", vocab_blocks(life_vocab), False)}
-  {details("高频表达", expr_blocks(scenario_expr), False)}
+  {details("高频表达", expr_blocks(life_expr), False)}
   {details("德国人会怎么说", reusable_html, False)}
 </section>
 <section>
@@ -809,8 +1150,8 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
   {details("完整德语正文", sections_html(listening["sections"]), True)}
   {details("逐段中文翻译", f"<div class='zh'>{listening_translation_html}</div>", True)}
   {details("关键句 8-12 句", listening_key_html, False)}
-  {details("高频词汇（5个）", vocab_blocks(listening_vocab), False)}
-  {details("重点表达（3个）", expr_blocks(listening_expr), False)}
+  {details("高频词汇", vocab_blocks(listening_vocab), False)}
+  {details("重点表达", expr_blocks(listening_expr), False)}
   {details("听力难度说明", "<p>B1-B2。DW Langsam Gesprochene Nachrichten 语速较慢、发音清楚，但新闻词汇、被动句和长名词结构仍需要适应。</p>", True)}
 </section>
 <section>
@@ -823,30 +1164,25 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
   {details("高频表达", expr_blocks(reading_expr), False)}
   {details("德国生活背景解释", "<p>这类材料适合恢复德国公共生活阅读能力：先抓机构、动作和影响，再看原因与后果。遇到政策、医疗、教育和行政词时，优先理解它在德国生活中的实际作用。</p>", True)}
 </section>
-<section>
-  <h2>今天只记住这 3 个</h2>
-  {takeaway_html}
-</section>
 """
     page_html = build_page(subject, page_body)
     page_path = Path("outputs") / "deutsch-pages" / f"{date}.html"
     page_path.parent.mkdir(parents=True, exist_ok=True)
     page_path.write_text(page_html, encoding="utf-8")
 
-    takeaways_text = "\n".join(f"{idx}. {item['expr']}" for idx, item in enumerate(takeaways, 1))
     short_text = f"""{subject}
 
 今日主题：
 {life["topic"]}
+
+一句话简介：
+{top_intro}
 
 今日听力：
 {listening['title']}
 
 今日阅读：
 {reading['title']}
-
-今日只记住这 3 个：
-{takeaways_text}
 
 完整内容：
 打开今日学习页： {page_url}
@@ -857,9 +1193,9 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
 <header><h1>{h(subject)}</h1><p>完整学习页入口</p></header>
 <section>
   <h2>今日主题</h2><p>{h(life["topic"])}</p>
+  <h2>一句话简介</h2><p>{h(top_intro)}</p>
   <h2>今日听力</h2><p>{h(listening['title'])}</p>
   <h2>今日阅读</h2><p>{h(reading['title'])}</p>
-  <h2>今日只记住这 3 个</h2><pre>{h(takeaways_text)}</pre>
   <p><a href="{h(page_url)}">打开今日完整学习页</a></p>
 </section>
 """,
@@ -869,14 +1205,14 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
 <b>今日主题：</b>
 {tg(life["topic"])}
 
+<b>一句话简介：</b>
+{tg(top_intro)}
+
 <b>今日听力：</b>
 {tg(listening['title'])}
 
 <b>今日阅读：</b>
 {tg(reading['title'])}
-
-<b>今日只记住这 3 个：</b>
-{tg(takeaways_text)}
 
 <b>完整内容：</b>
 打开今日学习页： {tg(page_url)}
@@ -896,7 +1232,7 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
         "listening_link": listening["url"],
         "page_url": page_url,
         "page_path": str(page_path),
-        "expressions": [item["expr"] for item in takeaways],
+        "expressions": [item["de"] for item in [*life_expr, *listening_expr, *reading_expr][:3]],
         "version": "v5",
     }
     return subject, short_html, short_text, telegram, record, page_path
