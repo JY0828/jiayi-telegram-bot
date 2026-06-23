@@ -800,11 +800,16 @@ ADVANCED_SUFFIXES = (
 
 KNOWN_EXPRESSION_PATTERNS = (
     (r"\bAntrag auf Elterngeld\b.*\bstellen\b", "den Antrag auf Elterngeld stellen"),
+    (r"\bAntrag\b.*\bbei einer Elterngeldstelle\b.*\bstellen\b", "bei einer Elterngeldstelle stellen"),
     (r"\bElterngeld\b.*\bdigital\b.*\bbeantragen\b", "Elterngeld digital beantragen"),
     (r"\bwenden Sie sich an die Elterngeldstelle\b", "sich an die Elterngeldstelle wenden"),
-    (r"\bFormular Ihres Bundeslandes\b", "das Formular des Bundeslandes nutzen"),
+    (r"\bFormular Ihres Bundeslandes\b|\bnutzen Sie\b.*\bFormular\b", "das Formular nutzen"),
+    (r"\binnerhalb der ersten 3 Lebensmonate\b.*\bstellen\b", "innerhalb der ersten Lebensmonate stellen"),
     (r"\brückwirkend gezahlt\b", "rückwirkend gezahlt werden"),
     (r"\bSchritt für Schritt\b", "Schritt für Schritt"),
+    (r"\bführt\b.*\bSchritt für Schritt\b.*\bdurch den Antrag\b", "Schritt für Schritt durch den Antrag führen"),
+    (r"\berklärt Fachbegriffe\b", "Fachbegriffe erklären"),
+    (r"\bfehlerhafte Eingaben erkennen\b", "fehlerhafte Eingaben erkennen"),
     (r"\bnehm(?:en|e|t)? Fahrt auf\b", "Fahrt aufnehmen"),
     (r"\bAbkommen\b.*\bzu erzielen\b|\bAbkommen\b.*\berzielen\b", "ein Abkommen erzielen"),
     (r"\bauf Arbeitsebene\b", "auf Arbeitsebene"),
@@ -876,6 +881,20 @@ KNOWN_CN = {
     "seltene erden": "稀土",
     "unterstützung": "支持；援助",
     "zuständig": "负责的；有管辖权的",
+    "bei einer elterngeldstelle stellen": "向父母津贴办公室提交",
+    "das formular nutzen": "使用表格",
+    "innerhalb der ersten lebensmonate stellen": "在出生后的最初几个月内提交",
+    "rückwirkend gezahlt werden": "被追溯支付",
+    "schritt für schritt durch den antrag führen": "一步步引导完成申请",
+    "fachbegriffe erklären": "解释专业术语",
+    "fehlerhafte eingaben erkennen": "识别错误输入",
+    "eine entscheidung treffen": "作出决定",
+    "wirtschaftssanktionen verlängern": "延长经济制裁",
+    "bereitschaft zum frieden zeigen": "表现出和平意愿",
+    "jemanden nachdrücklich auffordern": "强烈敦促某人",
+    "ein abkommen erzielen": "达成协议",
+    "einen kommunikationskanal einrichten": "建立沟通渠道",
+    "mit fortschritten rechnen": "预期会有进展",
 }
 
 KNOWN_EXPRESSION_CN = {
@@ -911,6 +930,12 @@ KNOWN_EXPRESSION_CN = {
     "jemanden nachdrücklich auffordern": "强烈敦促某人",
     "eine reise absagen": "取消行程",
     "ziele zur verringerung setzen": "设定降低/减少的目标",
+    "bei einer elterngeldstelle stellen": "向父母津贴办公室提交",
+    "das formular nutzen": "使用表格",
+    "innerhalb der ersten lebensmonate stellen": "在出生后的最初几个月内提交",
+    "schritt für schritt durch den antrag führen": "一步步引导完成申请",
+    "fachbegriffe erklären": "解释专业术语",
+    "fehlerhafte eingaben erkennen": "识别错误输入",
 }
 
 
@@ -1012,13 +1037,14 @@ def openai_learning_items(text: str, module: str, vocab_limit: int, expr_limit: 
 - 词汇和表达必须来自这段正文，不能使用旧模板、通用列表或外部材料。
 - 三个模块会分别调用你，因此不要补充其他模块的内容。
 - 按“曾经 C1、现在恢复德国真实阅读能力”的标准选择，不要选 A1-B1 基础词。
-- 词汇优先选择：复合名词、名词化结构、政策/行政/法律/医疗/经济/新闻中高频词、能决定原文理解的抽象词。
+- 词汇不要只理解成单词，优先选择“能直接带进句子里用的语言块”：动词搭配、名词+动词框架、介词固定搭配、行政/新闻惯用结构。
+- 只有当原文里确实没有足够搭配时，才补充复合名词、名词化结构、政策/行政/法律/医疗/经济/新闻中高频词。
 - 表达优先选择：Funktionsverbgefüge、固定介词搭配、新闻报道固定说法、行政/法律/政策常用句式。
 - 避免选择：国家名、人名、星期、普通数字词、Prozent、Antrag、Kind、Gespräch 这类单独出现时过于基础的词；如果必须选，要扩展成原文里的完整搭配。
 - 返回 JSON 对象，格式：
 {{
   "vocab": [
-    {{"word":"德语词或短语","pos":"词性中文","cn":"中文意思","context":"本文中的意思","frequency":"⭐⭐⭐/⭐⭐/⭐","example":"原文例句或贴近原文例句","example_cn":"例句中文翻译"}}
+    {{"word":"德语词/短语/搭配","pos":"词性或类型中文，如固定搭配/名词化结构/复合名词","cn":"中文意思","context":"在句子里怎么用","frequency":"⭐⭐⭐/⭐⭐/⭐","example":"原文例句或贴近原文例句","example_cn":"例句中文翻译"}}
   ],
   "expressions": [
     {{"de":"德语固定搭配或高频表达","cn":"中文意思","scene":"适用场景","example":"原文例句或贴近原文例句","translation":"例句中文翻译"}}
@@ -1127,6 +1153,36 @@ def normalize_expression_rows(rows: list[dict], text: str, limit: int) -> list[d
 
 
 def fallback_vocab_rows(text: str, limit: int) -> list[dict]:
+    usage_candidates: list[tuple[str, str]] = []
+    for sentence in split_sentences(text):
+        for pattern, phrase in KNOWN_EXPRESSION_PATTERNS:
+            if re.search(pattern, sentence, flags=re.I) and is_expression_candidate(phrase):
+                usage_candidates.append((phrase, sentence))
+    usage_rows: list[dict] = []
+    seen_usage: set[str] = set()
+    for phrase, example in usage_candidates:
+        key = normalize_learning_key(phrase)
+        if not key or key in seen_usage:
+            continue
+        seen_usage.add(key)
+        cn = KNOWN_CN.get(phrase.casefold()) or KNOWN_EXPRESSION_CN.get(phrase.casefold())
+        if not cn:
+            cn = translate_required([phrase], "usage vocabulary")[0]
+        example_cn = translate_required([example], "usage vocabulary example")[0]
+        usage_rows.append(
+            {
+                "word": phrase,
+                "pos": "固定搭配/句子用法",
+                "cn": cn,
+                "context": f"常和原文里的动词框架一起使用：{phrase}",
+                "frequency": "⭐⭐⭐",
+                "example": example,
+                "example_cn": example_cn,
+            }
+        )
+        if len(usage_rows) >= limit:
+            return usage_rows
+
     noun_phrases = re.findall(
         r"\b(?:[A-ZÄÖÜ][A-Za-zÄÖÜäöüß-]+(?:-[A-ZÄÖÜA-Za-zÄÖÜäöüß]+)*\s+){0,2}"
         r"[A-ZÄÖÜ][A-Za-zÄÖÜäöüß-]*(?:-[A-ZÄÖÜA-Za-zÄÖÜäöüß]+)+\b",
@@ -1152,8 +1208,12 @@ def fallback_vocab_rows(text: str, limit: int) -> list[dict]:
     )
     picked = [display[key] for key in ranked[:limit]]
     translations = translate_required(picked, "content vocabulary") if picked else []
-    rows = []
+    rows = usage_rows[:]
     for word, cn in zip(picked, translations):
+        if len(rows) >= limit:
+            break
+        if normalize_learning_key(word) in seen_usage:
+            continue
         cn = KNOWN_CN.get(word.casefold(), cn)
         example = find_example(text, word)
         example_cn = translate_required([example], "content vocabulary example")[0]
@@ -1162,7 +1222,7 @@ def fallback_vocab_rows(text: str, limit: int) -> list[dict]:
                 "word": word,
                 "pos": guess_pos(word),
                 "cn": cn,
-                "context": cn,
+                "context": f"理解原文中的复合名词或名词化结构：{cn}",
                 "frequency": "⭐⭐⭐" if counts[word.casefold()] > 1 else "⭐⭐",
                 "example": example,
                 "example_cn": example_cn,
@@ -1248,7 +1308,7 @@ def expr_blocks(rows: list[dict]) -> str:
 
 def vocab_blocks(rows: list[dict]) -> str:
     return "".join(
-        f"<div class='item'><b>{h(row['word'])}</b><br>词性：{h(row['pos'])}<br>中文意思：{h(row['cn'])}<br>本文中的意思：{h(row['context'])}<br>德国生活使用频率：{h(row['frequency'])}<br>例句：{h(row['example'])}</div>"
+        f"<div class='item'><b>{h(row['word'])}</b><br>类型：{h(row['pos'])}<br>中文意思：{h(row['cn'])}<br>在句子里怎么用：{h(row['context'])}<br>德国生活使用频率：{h(row['frequency'])}<br>例句：{h(row['example'])}<br>中文翻译：{h(row.get('example_cn', ''))}</div>"
         for row in rows
     )
 
