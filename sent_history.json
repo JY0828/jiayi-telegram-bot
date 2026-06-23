@@ -133,5 +133,27 @@
       "schlapp sein"
     ],
     "version": "v5"
+  },
+  {
+    "sequence": 8,
+    "date": "2026-06-23",
+    "mode": "daily",
+    "topic": "Bürgeramt",
+    "life_topic": "申请 Elterngeld 时要注意时间和材料",
+    "life_source": "Familienportal des Bundes",
+    "life_url": "https://familienportal.de/familienportal/familienleistungen/elterngeld/faq/wie-kann-ich-elterngeld-beantragen--124762",
+    "life_slice_start": 0,
+    "news_title": "22.06.2026 – Langsam Gesprochene Nachrichten",
+    "news_link": "https://learngerman.dw.com/de/22062026-langsam-gesprochene-nachrichten/a-77653947",
+    "listening_title": "22.06.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/22062026-langsam-gesprochene-nachrichten/a-77653947",
+    "page_url": "https://raw.githack.com/JY0828/jiayi-telegram-bot/main/outputs/deutsch-pages/2026-06-23.html",
+    "page_path": "outputs/deutsch-pages/2026-06-23.html",
+    "expressions": [
+      "die Unterlagen",
+      "vollständig sein",
+      "nicht nötig sein"
+    ],
+    "version": "v5"
   }
 ]
