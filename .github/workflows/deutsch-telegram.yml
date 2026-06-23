@@ -46,7 +46,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4.1-mini' }}
-          PUBLIC_PAGE_BASE: ${{ vars.PUBLIC_PAGE_BASE || 'https://raw.githack.com/JY0828/jiayi-telegram-bot/main/outputs' }}
+          PUBLIC_PAGE_BASE: ${{ vars.PUBLIC_PAGE_BASE || 'https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs' }}
         run: |
           MODE="${{ inputs.mode || 'auto' }}"
           if [ "${{ github.event_name }}" = "push" ]; then

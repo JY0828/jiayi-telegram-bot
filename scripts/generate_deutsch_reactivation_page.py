@@ -18,7 +18,7 @@ from pathlib import Path
 import generate_deutsch_reactivation_email as base
 
 
-DEFAULT_PAGE_BASE = "https://raw.githack.com/JY0828/jiayi-telegram-bot/main/outputs"
+DEFAULT_PAGE_BASE = "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs"
 DW_SLOW_NEWS_URL = "https://learngerman.dw.com/de/langsam-gesprochene-nachrichten/s-60040332"
 NACHRICHTENLEICHT_FEED = "https://www.deutschlandfunk.de/podcast-nachrichtenleicht-der-wochenrueckblick-in-einfacher-sprache-100.xml"
 LIFE_SOURCE_CANDIDATES = (
@@ -1015,6 +1015,13 @@ def page_link_for(date: str, page_base: str) -> str:
     return f"{page_base.rstrip('/')}/deutsch-pages/{date}.html"
 
 
+def safe_page_base(page_base: str) -> str:
+    lowered = (page_base or "").casefold()
+    if "raw.githack.com" in lowered or "raw.githubusercontent.com" in lowered:
+        return DEFAULT_PAGE_BASE
+    return page_base or DEFAULT_PAGE_BASE
+
+
 def details(title: str, body: str, open_: bool = False) -> str:
     attr = " open" if open_ else ""
     return f"<details{attr}><summary>{h(title)}</summary>{body}</details>"
@@ -1269,6 +1276,7 @@ def main() -> None:
     parser.add_argument("--telegram-output", default="deutsch-reaktivierung-telegram.html")
     parser.add_argument("--subject-output", default="deutsch-reaktivierung-subject.txt")
     args = parser.parse_args()
+    args.page_base = safe_page_base(args.page_base)
 
     today = base.now_berlin().date()
     history_path = Path(args.history)
