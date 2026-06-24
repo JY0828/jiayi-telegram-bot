@@ -155,5 +155,27 @@
       "nicht nötig sein"
     ],
     "version": "v5"
+  },
+  {
+    "sequence": 9,
+    "date": "2026-06-24",
+    "mode": "daily",
+    "topic": "116117 / Facharzttermin",
+    "life_topic": "判断什么时候打 116117，什么时候打 112",
+    "life_source": "116117",
+    "life_url": "https://www.116117.de/de/aerztlicher-bereitschaftsdienst.php",
+    "life_slice_start": 1,
+    "news_title": "18.06.2026 – Langsam Gesprochene Nachrichten",
+    "news_link": "https://learngerman.dw.com/de/18062026-langsam-gesprochene-nachrichten/a-77599002",
+    "listening_title": "23.06.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/23062026-langsam-gesprochene-nachrichten/a-77668669",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-06-24.html",
+    "page_path": "outputs/deutsch-pages/2026-06-24.html",
+    "expressions": [
+      "nach Angaben",
+      "Abhängigkeit verringern",
+      "ein Rahmenabkommen unterzeichnen"
+    ],
+    "version": "v5"
   }
 ]
