@@ -1529,6 +1529,102 @@ def build_page(title: str, body: str) -> str:
 </html>"""
 
 
+def raw_github_page_url(page_url: str) -> str:
+    match = re.search(r"https://github\.com/([^/]+/[^/]+)/blob/main/(outputs/deutsch-pages/\d{4}-\d{2}-\d{2}\.html)", page_url)
+    if match:
+        return f"https://raw.githubusercontent.com/{match.group(1)}/main/{match.group(2)}"
+    return page_url
+
+
+def strip_tags(value: str) -> str:
+    return html.unescape(re.sub(r"<[^>]+>", " ", value or "")).strip()
+
+
+def extract_public_page_summary(page_url: str) -> dict | None:
+    raw_url = raw_github_page_url(page_url)
+    try:
+        raw, error = fetch_raw(raw_url)
+    except Exception:
+        return None
+    if error or not raw:
+        return None
+    h1 = strip_tags(re.search(r"<h1>(.*?)</h1>", raw, re.S).group(1)) if re.search(r"<h1>(.*?)</h1>", raw, re.S) else ""
+    topic_match = re.search(r'<p class="theme">今日主题：(.*?)</p>', raw, re.S)
+    intro_match = re.search(r"一句话简介：(.*?)</p>", raw, re.S)
+    listening_pos = raw.find("<h2>2. 今日听力</h2>")
+    reading_pos = raw.find("<h2>3. 今日阅读</h2>")
+    listening_title = ""
+    reading_title = ""
+    if listening_pos >= 0:
+        listening_chunk = raw[listening_pos : raw.find("<section>", listening_pos + 1) if raw.find("<section>", listening_pos + 1) >= 0 else len(raw)]
+        match = re.search(r"<p><b>(.*?)</b></p>", listening_chunk, re.S)
+        listening_title = strip_tags(match.group(1)) if match else ""
+    if reading_pos >= 0:
+        reading_chunk = raw[reading_pos : raw.find("<section>", reading_pos + 1) if raw.find("<section>", reading_pos + 1) >= 0 else len(raw)]
+        match = re.search(r"<p><b>(.*?)</b></p>", reading_chunk, re.S)
+        reading_title = strip_tags(match.group(1)) if match else ""
+    if not (h1 and topic_match and intro_match and listening_title and reading_title):
+        return None
+    return {
+        "display_title": h1,
+        "topic": strip_tags(topic_match.group(1)),
+        "intro": strip_tags(intro_match.group(1)),
+        "listening_title": listening_title,
+        "reading_title": reading_title,
+    }
+
+
+def short_outputs_from_summary(subject: str, page_url: str, summary: dict) -> tuple[str, str, str]:
+    text = f"""{subject}
+
+今日主题：
+{summary["topic"]}
+
+一句话简介：
+{summary["intro"]}
+
+今日听力：
+{summary["listening_title"]}
+
+今日阅读：
+{summary["reading_title"]}
+
+完整内容：
+打开今日学习页： {page_url}
+"""
+    html_body = build_page(
+        subject,
+        f"""
+<header><h1>{h(subject)}</h1><p>完整学习页入口</p></header>
+<section>
+  <h2>今日主题</h2><p>{h(summary["topic"])}</p>
+  <h2>一句话简介</h2><p>{h(summary["intro"])}</p>
+  <h2>今日听力</h2><p>{h(summary["listening_title"])}</p>
+  <h2>今日阅读</h2><p>{h(summary["reading_title"])}</p>
+  <p><a href="{h(page_url)}">打开今日完整学习页</a></p>
+</section>
+""",
+    )
+    telegram = f"""<b>{tg(subject)}</b>
+
+<b>今日主题：</b>
+{tg(summary["topic"])}
+
+<b>一句话简介：</b>
+{tg(summary["intro"])}
+
+<b>今日听力：</b>
+{tg(summary["listening_title"])}
+
+<b>今日阅读：</b>
+{tg(summary["reading_title"])}
+
+<b>完整内容：</b>
+打开今日学习页： {tg(page_url)}
+"""
+    return html_body, text, telegram
+
+
 def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_base: str) -> tuple[str, str, str, str, dict, Path]:
     weekend = mode == "saturday"
     date = today.isoformat()
@@ -1685,6 +1781,13 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
 <b>完整内容：</b>
 打开今日学习页： {tg(page_url)}
 """
+    if os.getenv("SYNC_SHORT_FROM_PUBLIC_PAGE", "").strip().lower() in {"1", "true", "yes"}:
+        public_summary = extract_public_page_summary(page_url)
+        if public_summary:
+            subject = f"{public_summary['display_title']} - {date}"
+            short_html, short_text, telegram = short_outputs_from_summary(subject, page_url, public_summary)
+        else:
+            print(f"WARN public_page_summary_unavailable url={page_url}", file=sys.stderr)
     record = {
         "sequence": sequence,
         "date": date,
