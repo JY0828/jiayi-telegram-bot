@@ -332,10 +332,9 @@ def choose_dw_slow_news(
     if history:
         for key in history_keys:
             recently_used.update(recent_values(history, key, limit=14))
+    articles: list[dict] = []
     for url in dw_slow_news_candidates():
         if skip_url and url == skip_url:
-            continue
-        if url.casefold() in recently_used:
             continue
         article = dw_article_from_url(url)
         if not article:
@@ -343,15 +342,17 @@ def choose_dw_slow_news(
         if require_audio and not article["audio_url"]:
             continue
         if quality_ok(article["sections"], minimum_chars):
-            return article
-    if recently_used:
-        return choose_dw_slow_news(
-            minimum_chars,
-            require_audio,
-            skip_url=skip_url,
-            history=None,
-            history_keys=history_keys,
-        )
+            articles.append(article)
+    if articles:
+        articles.sort(key=lambda item: article_date_key(item.get("title", "")), reverse=True)
+        unused = [item for item in articles if item["url"].casefold() not in recently_used]
+        if not unused:
+            return articles[0]
+        newest = article_date_key(articles[0].get("title", ""))
+        freshest_unused = article_date_key(unused[0].get("title", ""))
+        if date_distance_days(newest, freshest_unused) <= 2:
+            return unused[0]
+        return articles[0]
     raise RuntimeError("No complete DW slow-news article passed quality checks.")
 
 
@@ -1685,6 +1686,8 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
     top_intro = (
         f"{life_summary} 听力讲：{listening_summary} 阅读讲：{reading_summary}"
     )
+    life_vocab_html = details("重点词汇", vocab_blocks(life_vocab), False) if life_vocab else ""
+    life_expr_html = details("高频表达", expr_blocks(life_expr), False) if life_expr else ""
 
     page_body = f"""
 <header>
@@ -1702,8 +1705,8 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
   {details("中文翻译", f"<div class='zh'>{life_translation_html}</div>", True)}
   {details("今日最实用的5句", useful_html, True)}
   {details("替换练习", substitutions, False)}
-  {details("重点词汇", vocab_blocks(life_vocab), False)}
-  {details("高频表达", expr_blocks(life_expr), False)}
+  {life_vocab_html}
+  {life_expr_html}
 </section>
 <section>
   <h2>2. 今日听力</h2>
