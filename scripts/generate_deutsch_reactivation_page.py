@@ -21,30 +21,115 @@ import generate_deutsch_reactivation_email as base
 DEFAULT_PAGE_BASE = "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs"
 DW_SLOW_NEWS_URL = "https://learngerman.dw.com/de/langsam-gesprochene-nachrichten/s-60040332"
 NACHRICHTENLEICHT_FEED = "https://www.deutschlandfunk.de/podcast-nachrichtenleicht-der-wochenrueckblick-in-einfacher-sprache-100.xml"
-LIFE_SOURCE_CANDIDATES = (
+LIFE_DIALOGUE_CANDIDATES = (
     {
-        "source": "Die Techniker",
-        "url": "https://www.tk.de/techniker/gesundheit-foerdern/familie/kinder-und-jugendliche/krankheiten-bei-kindern-und-jugendlichen/fieber-bei-kindern-2013166",
-        "theme": "Kinderarzt: Fieber bei Kindern einschätzen und beschreiben",
-        "topic": "孩子发烧时如何与 Kinderarzt 沟通",
-        "keywords": ("fieber", "kind", "kinderarzt", "ärztin", "arzt", "temperatur"),
-        "history_topics": ("Kinderarzt",),
+        "source": "lingoneo",
+        "url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/a-doctors-appointment/page-1756",
+        "theme": "Arztpraxis: Anmeldung am Empfang",
+        "topic": "在 Arztpraxis 前台说明来意和确认预约",
+        "intro": "在德国看家庭医生、Kinderarzt 或专科医生时，第一关通常是前台 Anmeldung。这个场景练的是：说明自己有预约、说明来看哪位医生、填写病史表，以及听懂“请坐、医生马上来”。",
+        "verify_phrases": ("Haben Sie einen Termin?", "Ich habe einen Termin um 14 Uhr.", "Der Arzt wird in Kürze bei Ihnen sein."),
+        "dialogue": [
+            ("Empfang", "Guten Morgen, wie kann ich Ihnen heute helfen?", "早上好，今天有什么可以帮您的？"),
+            ("Patientin", "Ich möchte einen Arzt sprechen.", "我想见医生。"),
+            ("Empfang", "Haben Sie einen Termin?", "您有预约吗？"),
+            ("Patientin", "Ja, ich habe einen Termin um 14 Uhr.", "有的，我预约的是14点。"),
+            ("Empfang", "Sind Sie hier, um Dr. Fiedler zu sehen?", "您是来看 Fiedler 医生的吗？"),
+            ("Patientin", "Ja, genau. Ich bin hier, um Dr. Fiedler zu sehen.", "是的，没错。我是来看 Fiedler 医生的。"),
+            ("Empfang", "Könnten Sie bitte Ihre medizinische Vorgeschichte auf diesem Formular eintragen?", "您能在这张表上填写一下您的既往病史吗？"),
+            ("Patientin", "Ja, natürlich. Wo soll ich das Formular danach abgeben?", "当然可以。填完以后我应该把表交到哪里？"),
+            ("Empfang", "Bitte geben Sie es wieder an der Anmeldung ab. Der Arzt wird in Kürze bei Ihnen sein.", "请把它交回前台。医生很快就会来。"),
+        ],
+        "useful": [
+            ("Ich habe einen Termin um 14 Uhr.", "我预约的是14点。", "医生前台、Kinderradiologie、Bürgerbüro、Kita Gesprächstermin"),
+            ("Ich bin hier, um Dr. Fiedler zu sehen.", "我是来看 Fiedler 医生的。", "到诊所/医院前台报到"),
+            ("Könnten Sie bitte kurz prüfen, ob ich richtig bin?", "您能帮我确认一下我是不是来对地方了吗？", "医院、Radiologie、大楼内找科室"),
+            ("Wo soll ich das Formular danach abgeben?", "填完以后我应该把表交到哪里？", "诊所、保险、行政窗口"),
+            ("Der Arzt wird in Kürze bei Ihnen sein.", "医生很快就会来。", "听懂前台说明"),
+        ],
+        "substitution": [
+            {
+                "pattern": "Ich habe einen Termin um ...",
+                "items": ["um 8:30 Uhr", "beim Kinderarzt", "bei der Radiologie", "bei der Ausländerbehörde"],
+            },
+            {
+                "pattern": "Ich bin hier, um ... zu sehen.",
+                "items": ["Dr. Fiedler", "die Kinderärztin", "die Sachbearbeiterin", "Herrn Müller von der Versicherung"],
+            },
+        ],
+        "history_topics": ("Arztpraxis Anmeldung", "Kinderarzt", "Kinderradiologie"),
     },
     {
-        "source": "116117",
-        "url": "https://www.116117.de/de/aerztlicher-bereitschaftsdienst.php",
-        "theme": "116117: Bereitschaftsdienst oder Notruf 112",
-        "topic": "判断什么时候打 116117，什么时候打 112",
-        "keywords": ("116117", "112", "bereitschaftsdienst", "beschwerden", "praxis", "notfall"),
-        "history_topics": ("116117 / Facharzttermin",),
+        "source": "lingoneo",
+        "url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/a-dentist-appointment/page-1755",
+        "theme": "Zahnarztpraxis: Schmerzen schildern",
+        "topic": "在牙医前台/问诊时说明疼痛情况",
+        "intro": "在德国看牙医或带孩子去牙科时，经常需要先简单说明疼痛程度和开始时间。这个场景练的是：自然回答 Wie geht es Ihnen?、说明疼痛、回答症状开始时间。",
+        "verify_phrases": ("Mein Zahn tut sehr weh.", "Wann haben die Zahnschmerzen denn angefangen?"),
+        "dialogue": [
+            ("Zahnarzt", "Guten Morgen. Wie geht es Ihnen heute?", "早上好。您今天感觉怎么样？"),
+            ("Patient", "Es geht so. Mein Zahn tut sehr weh.", "还行吧。我的牙很疼。"),
+            ("Zahnarzt", "Wann haben die Zahnschmerzen denn angefangen?", "牙痛是什么时候开始的？"),
+            ("Patient", "Gestern Abend. Seitdem ist es schlimmer geworden.", "昨天晚上。从那以后越来越严重了。"),
+            ("Zahnarzt", "Tut es die ganze Zeit weh oder nur beim Kauen?", "是一直疼，还是只有咀嚼时疼？"),
+            ("Patient", "Vor allem beim Kauen und wenn ich etwas Kaltes trinke.", "主要是咀嚼时，还有喝冷饮时。"),
+            ("Zahnarzt", "Dann schauen wir uns das gleich an.", "那我们马上检查一下。"),
+        ],
+        "useful": [
+            ("Es geht so. Mein Zahn tut sehr weh.", "还行吧。我的牙很疼。", "牙医、Kinderarzt 描述疼痛"),
+            ("Seit gestern Abend ist es schlimmer geworden.", "从昨天晚上开始变严重了。", "描述病情变化"),
+            ("Tut es die ganze Zeit weh oder nur beim Kauen?", "是一直疼，还是只有咀嚼时疼？", "听懂医生追问"),
+            ("Vor allem beim Kauen.", "主要是咀嚼时。", "回答症状触发条件"),
+            ("Dann schauen wir uns das gleich an.", "那我们马上看一下。", "听懂医生安排"),
+        ],
+        "substitution": [
+            {
+                "pattern": "Seit ... ist es schlimmer geworden.",
+                "items": ["seit gestern Abend", "seit heute Morgen", "seit dem Wochenende", "seit der Impfung"],
+            },
+            {
+                "pattern": "Vor allem bei/beim ...",
+                "items": ["beim Kauen", "beim Schlucken", "beim Laufen", "bei kalten Getränken"],
+            },
+        ],
+        "history_topics": ("Zahnarzt", "Schmerzen schildern"),
     },
     {
-        "source": "Familienportal des Bundes",
-        "url": "https://familienportal.de/familienportal/familienleistungen/elterngeld/faq/wie-kann-ich-elterngeld-beantragen--124762",
-        "theme": "Elterngeld beantragen",
-        "topic": "申请 Elterngeld 时要注意时间和材料",
-        "keywords": ("elterngeld", "antrag", "geburt", "lebensmonate", "beantragen"),
-        "history_topics": ("Elterngeld",),
+        "source": "lingoneo",
+        "url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/business/telephoning/page-1797",
+        "theme": "Telefon: jemanden erreichen oder Rückruf erbitten",
+        "topic": "电话里找人、留言并请求回电",
+        "intro": "在德国打电话给诊所、Kita、保险公司或 Hausverwaltung 时，经常需要说明自己是谁、想找谁、对方不在时请求回电。这个场景练的是最常用的电话开场和留言。",
+        "verify_phrases": ("Hier spricht", "Ist Lisa zu sprechen?", "Wer spricht?"),
+        "dialogue": [
+            ("Anruferin", "Guten Tag, hier spricht Li Wang.", "您好，我是 Li Wang。"),
+            ("Empfang", "Guten Tag. Worum geht es?", "您好。请问是什么事？"),
+            ("Anruferin", "Ist Frau Schneider zu sprechen?", "Schneider 女士在吗？"),
+            ("Empfang", "Einen Moment bitte. Nein, sie ist gerade nicht am Platz.", "请稍等。不，她现在不在座位上。"),
+            ("Anruferin", "Könnten Sie ihr bitte ausrichten, dass ich angerufen habe?", "您能帮我转告她我来过电话吗？"),
+            ("Empfang", "Natürlich. Worum geht es genau?", "当然。具体是什么事？"),
+            ("Anruferin", "Es geht um unseren Termin am Freitag. Ich hätte dazu noch eine Rückfrage.", "是关于我们周五的预约。我还有一个问题想确认。"),
+            ("Empfang", "Soll Frau Schneider Sie zurückrufen?", "需要 Schneider 女士给您回电话吗？"),
+            ("Anruferin", "Ja, bitte. Am besten unter dieser Nummer.", "是的，麻烦了。最好打这个号码。"),
+        ],
+        "useful": [
+            ("Guten Tag, hier spricht Li Wang.", "您好，我是 Li Wang。", "任何正式电话开场"),
+            ("Ist Frau Schneider zu sprechen?", "Schneider 女士在吗？", "诊所、Kita、保险、Hausverwaltung"),
+            ("Könnten Sie ihr bitte ausrichten, dass ich angerufen habe?", "您能转告她我来过电话吗？", "留言"),
+            ("Es geht um unseren Termin am Freitag.", "是关于我们周五的预约。", "说明来电事项"),
+            ("Könnte sie mich bitte zurückrufen?", "她能给我回个电话吗？", "请求回电"),
+        ],
+        "substitution": [
+            {
+                "pattern": "Es geht um ...",
+                "items": ["unseren Termin", "die Rechnung", "die Kita-Anmeldung", "meinen Vertrag"],
+            },
+            {
+                "pattern": "Könnten Sie bitte ausrichten, dass ...",
+                "items": ["ich angerufen habe", "ich den Termin verschieben muss", "ich noch Unterlagen brauche"],
+            },
+        ],
+        "history_topics": ("Telefon Rückruf", "Mailbox", "Termin Rückfrage"),
     },
 )
 
@@ -317,7 +402,43 @@ def choose_reading_article(
     # pages often mix teaser text with Deutschlandfunk navigation/topic blocks. That is
     # worse than switching sources, so use the full-text DW fallback.
     _ = nachrichtenleicht_candidates()
-    return choose_dw_slow_news(500, require_audio=False, skip_url=skip_url, history=history, history_keys=("news_link",))
+    articles: list[dict] = []
+    for url in dw_slow_news_candidates():
+        if skip_url and url == skip_url:
+            continue
+        article = dw_article_from_url(url)
+        if article and quality_ok(article["sections"], 500):
+            articles.append(article)
+    if not articles:
+        raise RuntimeError("No complete reading article passed quality checks.")
+    articles.sort(key=lambda item: article_date_key(item.get("title", "")), reverse=True)
+    unused = [item for item in articles if item["url"].casefold() not in recent_news]
+    if not unused:
+        return articles[0]
+    newest = article_date_key(articles[0].get("title", ""))
+    freshest_unused = article_date_key(unused[0].get("title", ""))
+    if date_distance_days(newest, freshest_unused) <= 2:
+        return unused[0]
+    return articles[0]
+
+
+def article_date_key(title: str) -> tuple[int, int, int]:
+    match = re.search(r"\b(\d{2})\.(\d{2})\.(\d{4})\b", title or "")
+    if not match:
+        return (0, 0, 0)
+    day, month, year = (int(part) for part in match.groups())
+    return (year, month, day)
+
+
+def date_distance_days(left: tuple[int, int, int], right: tuple[int, int, int]) -> int:
+    if 0 in left or 0 in right:
+        return 999
+    try:
+        import datetime as dt
+
+        return abs((dt.date(*left) - dt.date(*right)).days)
+    except ValueError:
+        return 999
 
 
 def life_matches_history(entry: dict, candidate: dict) -> bool:
@@ -354,29 +475,50 @@ def rotate_paragraph_slice(paragraphs: list[str], usage_count: int, size: int = 
     return paragraphs[start : start + size], start
 
 
+def dialogue_page_ok(candidate: dict) -> bool:
+    raw, error = fetch_raw(candidate["url"])
+    if error:
+        return False
+    lowered = base.clean_text(raw).casefold()
+    if "practice dialogue" not in lowered and "phrases" not in lowered and "dialogue" not in lowered:
+        return False
+    return any(phrase.casefold() in lowered for phrase in candidate.get("verify_phrases", ()))
+
+
+def dialogue_to_paragraphs(dialogue: list[tuple[str, str, str]]) -> list[str]:
+    return [f"{speaker}: {de}" for speaker, de, _cn in dialogue]
+
+
+def ordered_life_dialogues(history: list[dict]) -> list[dict]:
+    recent = history[-30:]
+    scored: list[tuple[int, int, dict]] = []
+    for index, candidate in enumerate(LIFE_DIALOGUE_CANDIDATES):
+        last_seen = -1
+        for pos, entry in enumerate(recent):
+            if life_matches_history(entry, candidate):
+                last_seen = pos
+        scored.append((last_seen, index, candidate))
+    return [candidate for _last_seen, _index, candidate in sorted(scored, key=lambda item: (item[0] != -1, item[0], item[1]))]
+
+
 def choose_life_article(history: list[dict]) -> dict:
     raw_index = os.getenv("DEUTSCH_LIFE_INDEX", "").strip()
-    ordered = ordered_life_candidates(history)
+    ordered = ordered_life_dialogues(history)
     if raw_index.isdigit():
-        ordered = list(LIFE_SOURCE_CANDIDATES)
+        ordered = list(LIFE_DIALOGUE_CANDIDATES)
         index = int(raw_index) % len(ordered)
         ordered = ordered[index:] + ordered[:index]
     for candidate in ordered:
-        paragraphs, error = extract_article_paragraphs(candidate["url"], None)
-        if error:
+        if not dialogue_page_ok(candidate):
             continue
-        paragraphs = relevant_life_paragraphs(paragraphs, candidate["keywords"])
-        paragraphs, slice_start = rotate_paragraph_slice(paragraphs, life_usage_count(history, candidate))
-        text = " ".join(paragraphs)
-        if len(text) < 500:
-            continue
+        paragraphs = dialogue_to_paragraphs(candidate["dialogue"])
         return {
             **candidate,
             "paragraphs": paragraphs,
-            "slice_start": slice_start,
+            "slice_start": 0,
             "sections": [{"heading": candidate["theme"], "paragraphs": paragraphs}],
         }
-    raise RuntimeError("No complete life source article passed quality checks.")
+    raise RuntimeError("No verified dialogue source passed quality checks.")
 
 
 def relevant_life_paragraphs(paragraphs: list[str], keywords: tuple[str, ...]) -> list[str]:
@@ -601,6 +743,14 @@ def translate_required(paragraphs: list[str], label: str) -> list[str]:
     return translated
 
 
+def translate_best_effort(paragraphs: list[str], label: str) -> list[str]:
+    translated, error = translate_paragraphs(paragraphs)
+    if error or len(translated) != len(paragraphs):
+        print(f"WARN optional_translation_failed label={label} error={error}", file=sys.stderr)
+        return ["" for _ in paragraphs]
+    return translated
+
+
 def openai_brief_summary(title: str, text: str, label: str) -> str | None:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -679,6 +829,35 @@ def translated_html(original: list[str], translated: list[str]) -> str:
             chunks.append(f"<h3>{h(zh)}</h3>")
         else:
             chunks.append(f"<p>{h(zh)}</p>")
+    return "".join(chunks)
+
+
+def life_dialogue_html(dialogue: list[tuple[str, str, str]]) -> str:
+    return "".join(
+        f"<div class='item'><b>{h(speaker)}:</b> {h(de)}</div>"
+        for speaker, de, _cn in dialogue
+    )
+
+
+def life_dialogue_translation_html(dialogue: list[tuple[str, str, str]]) -> str:
+    return "".join(
+        f"<div class='item'><b>{h(speaker)}:</b> {h(cn)}</div>"
+        for speaker, _de, cn in dialogue
+    )
+
+
+def useful_sentence_html(rows: list[tuple[str, str, str]]) -> str:
+    return "".join(
+        f"<div class='item'><b>德语：</b> {h(de)}<br><b>中文：</b> {h(cn)}<br><b>适用场景：</b> {h(scene)}</div>"
+        for de, cn, scene in rows
+    )
+
+
+def substitution_html(rows: list[dict]) -> str:
+    chunks = []
+    for row in rows:
+        items = "".join(f"<li>{h(item)}</li>" for item in row.get("items", []))
+        chunks.append(f"<div class='item'><b>{h(row.get('pattern', ''))}</b><ul>{items}</ul></div>")
     return "".join(chunks)
 
 
@@ -1167,8 +1346,8 @@ def fallback_vocab_rows(text: str, limit: int) -> list[dict]:
         seen_usage.add(key)
         cn = KNOWN_CN.get(phrase.casefold()) or KNOWN_EXPRESSION_CN.get(phrase.casefold())
         if not cn:
-            cn = translate_required([phrase], "usage vocabulary")[0]
-        example_cn = translate_required([example], "usage vocabulary example")[0]
+            cn = translate_best_effort([phrase], "usage vocabulary")[0] or phrase
+        example_cn = translate_best_effort([example], "usage vocabulary example")[0]
         usage_rows.append(
             {
                 "word": phrase,
@@ -1207,7 +1386,7 @@ def fallback_vocab_rows(text: str, limit: int) -> list[dict]:
         reverse=True,
     )
     picked = [display[key] for key in ranked[:limit]]
-    translations = translate_required(picked, "content vocabulary") if picked else []
+    translations = translate_best_effort(picked, "content vocabulary") if picked else []
     rows = usage_rows[:]
     for word, cn in zip(picked, translations):
         if len(rows) >= limit:
@@ -1216,7 +1395,7 @@ def fallback_vocab_rows(text: str, limit: int) -> list[dict]:
             continue
         cn = KNOWN_CN.get(word.casefold(), cn)
         example = find_example(text, word)
-        example_cn = translate_required([example], "content vocabulary example")[0]
+        example_cn = translate_best_effort([example], "content vocabulary example")[0]
         rows.append(
             {
                 "word": word,
@@ -1262,8 +1441,8 @@ def fallback_expression_rows(text: str, limit: int, module: str) -> list[dict]:
             break
     phrases = [row["de"] for row in rows]
     examples = [row["example"] for row in rows]
-    phrase_cn = translate_required(phrases, "content expression") if phrases else []
-    example_cn = translate_required(examples, "content expression example") if examples else []
+    phrase_cn = translate_best_effort(phrases, "content expression") if phrases else []
+    example_cn = translate_best_effort(examples, "content expression example") if examples else []
     return [
         {
             "de": row["de"],
@@ -1289,7 +1468,11 @@ def page_link_for(date: str, page_base: str) -> str:
 
 def safe_page_base(page_base: str) -> str:
     lowered = (page_base or "").casefold()
-    if "raw.githack.com" in lowered or "raw.githubusercontent.com" in lowered:
+    if (
+        "raw.githack.com" in lowered
+        or "raw.githubusercontent.com" in lowered
+        or "github.com/jy0828/automation-mailer" in lowered
+    ):
         return DEFAULT_PAGE_BASE
     return page_base or DEFAULT_PAGE_BASE
 
@@ -1354,19 +1537,17 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
     page_url = page_link_for(date, page_base)
 
     life = choose_life_article(history)
-    scenario = choose_scenario_for_life(life, history, weekend=weekend)
     listening = choose_dw_slow_news(300, require_audio=True, history=history, history_keys=("listening_link",))
     reading = choose_reading_article(preferred=None, skip_url=listening["url"], history=history)
     life_flat = life["paragraphs"]
     listening_flat = flatten_sections(listening["sections"])
     reading_flat = flatten_sections(reading["sections"])
-    if sum(len(p) for p in life_flat) < 500:
+    if len(life.get("dialogue", [])) < 5:
         raise RuntimeError("Life text failed quality check.")
     if sum(len(p) for p in listening_flat) < 300:
         raise RuntimeError("Listening text failed quality check.")
     if sum(len(p) for p in reading_flat) < 500:
         raise RuntimeError("Reading text failed quality check.")
-    life_translation = translate_required(life_flat, "life")
     listening_translation = translate_required(listening_flat, "listening")
     reading_translation = translate_required(reading_flat, "reading")
 
@@ -1385,18 +1566,15 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
         reading_expr_limit,
     )
 
-    dialogue = base.dialogue_text(scenario["dialogue"])
-    reusable = base.reusable_sentence_rows(scenario)
-    reusable_html = "".join(
-        f"<div class='item'><b>德语：</b> {h(row['de'])}<br><b>中文：</b> {h(row['cn'])}<br><b>适用场景：</b> {h(row['scene'])}</div>"
-        for row in reusable
-    )
+    life_original_html = life_dialogue_html(life["dialogue"])
+    life_translation_html = life_dialogue_translation_html(life["dialogue"])
+    useful_html = useful_sentence_html(life.get("useful", []))
+    substitutions = substitution_html(life.get("substitution", []))
     listening_keys = sentence_rows_from_paragraphs(listening_flat, 12)
     listening_key_html = "".join(
         f"<div class='item'><b>德语：</b> {h(row['de'])}<br><b>中文：</b> {h(row['cn'])}</div>"
         for row in listening_keys
     )
-    life_translation_html = translated_html(life_flat, life_translation)
     listening_translation_html = translated_html(listening_flat, listening_translation)
     reading_translation_html = translated_html(reading_flat, reading_translation)
     listening_summary = openai_brief_summary(listening["title"], listening_text, "今日听力") or fallback_brief_summary(
@@ -1407,7 +1585,7 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
         reading_translation,
         reading["title"],
     )
-    life_summary = f"生活场景聚焦{life['theme']}，练习德国真实页面里的行政/医疗/育儿表达。"
+    life_summary = f"生活场景练习{life['theme']}，重点是德国真实生活中能直接开口使用的对话。"
     top_intro = (
         f"{life_summary} 听力讲：{listening_summary} 阅读讲：{reading_summary}"
     )
@@ -1422,11 +1600,14 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
 <section>
   <h2>1. 今日生活场景</h2>
   <p><b>来源：</b>{h(life["source"])}<br><b>主题：</b>{h(life["theme"])}<br><b>原文链接：</b><a href="{h(life["url"])}">{h(life["url"])}</a></p>
-  {details("原始内容", sections_html(life["sections"]), True)}
+  <h3>场景介绍</h3>
+  <p>{h(life["intro"])}</p>
+  {details("德语原始对话", life_original_html, True)}
   {details("中文翻译", f"<div class='zh'>{life_translation_html}</div>", True)}
+  {details("今日最实用的5句", useful_html, True)}
+  {details("替换练习", substitutions, False)}
   {details("重点词汇", vocab_blocks(life_vocab), False)}
   {details("高频表达", expr_blocks(life_expr), False)}
-  {details("德国人会怎么说", reusable_html, False)}
 </section>
 <section>
   <h2>2. 今日听力</h2>
@@ -1508,7 +1689,7 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
         "sequence": sequence,
         "date": date,
         "mode": mode,
-        "topic": scenario["topic"],
+        "topic": life["theme"],
         "life_topic": life["topic"],
         "life_source": life["source"],
         "life_url": life["url"],
