@@ -1,1 +1,1 @@
-2026-06-23T10:00:00+02:00 c1-summary-vocab-telegram-test
+2026-06-24T10:00:00+02:00 v6-dialogue-reading-refresh-test
