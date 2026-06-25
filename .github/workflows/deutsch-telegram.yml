@@ -18,7 +18,9 @@ on:
     paths:
       - .github/deutsch-telegram-test.trigger
   schedule:
-    # Avoid the top-of-hour Actions rush. The job gates on the Berlin 07:00-08:59 window below.
+    # Avoid the top-of-hour Actions rush. The job gates on the Berlin 07:00-13:59 window below.
+    # GitHub scheduled runs can be delayed or missed, so the wider window lets the first
+    # successful daytime run send once while sent_history.json prevents duplicates.
     - cron: "17,32,47 * * * *"
 
 permissions:
@@ -55,7 +57,8 @@ jobs:
           TELEGRAM_TEST="false"
           if [ "${{ github.event_name }}" = "schedule" ]; then
             BERLIN_HOUR="$(TZ=Europe/Berlin date +%H)"
-            if [ "$BERLIN_HOUR" != "07" ] && [ "$BERLIN_HOUR" != "08" ]; then
+            BERLIN_HOUR_NUM=$((10#$BERLIN_HOUR))
+            if [ "$BERLIN_HOUR_NUM" -lt 7 ] || [ "$BERLIN_HOUR_NUM" -gt 13 ]; then
               echo "skip=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
