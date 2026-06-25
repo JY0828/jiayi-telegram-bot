@@ -177,5 +177,26 @@
       "ein Rahmenabkommen unterzeichnen"
     ],
     "version": "v5"
+  },
+  {
+    "sequence": 10,
+    "date": "2026-06-25",
+    "mode": "daily",
+    "topic": "Zahnarztpraxis: Schmerzen schildern",
+    "life_topic": "在牙医前台/问诊时说明疼痛情况",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/a-dentist-appointment/page-1755",
+    "life_slice_start": 0,
+    "news_title": "23.06.2026 – Langsam Gesprochene Nachrichten",
+    "news_link": "https://learngerman.dw.com/de/23062026-langsam-gesprochene-nachrichten/a-77668669",
+    "listening_title": "24.06.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/24062026-langsam-gesprochene-nachrichten/a-77686290",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-06-25.html",
+    "page_path": "outputs/deutsch-pages/2026-06-25.html",
+    "expressions": [
+      "nach Angaben",
+      "nach Angaben"
+    ],
+    "version": "v5"
   }
 ]
