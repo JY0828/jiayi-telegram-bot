@@ -218,5 +218,25 @@
       "nach Angaben"
     ],
     "version": "v5"
+  },
+  {
+    "sequence": 12,
+    "date": "2026-06-27",
+    "mode": "saturday",
+    "topic": "Arztpraxis: Anmeldung am Empfang",
+    "life_topic": "在 Arztpraxis 前台说明来意和确认预约",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/a-doctors-appointment/page-1756",
+    "life_slice_start": 0,
+    "news_title": "25.06.2026 – Langsam Gesprochene Nachrichten",
+    "news_link": "https://learngerman.dw.com/de/25062026-langsam-gesprochene-nachrichten/a-77702735",
+    "listening_title": "26.06.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/26062026-langsam-gesprochene-nachrichten/a-77719216",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-06-27.html",
+    "page_path": "outputs/deutsch-pages/2026-06-27.html",
+    "expressions": [
+      "nach Angaben"
+    ],
+    "version": "v5"
   }
 ]
