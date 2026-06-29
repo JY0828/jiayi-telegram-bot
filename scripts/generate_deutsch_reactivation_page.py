@@ -1635,7 +1635,9 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
 
     life = choose_life_article(history)
     listening = choose_dw_slow_news(300, require_audio=True, history=history, history_keys=("listening_link",))
-    reading = choose_reading_article(preferred=None, skip_url=listening["url"], history=history)
+    # DW slow news gives us both complete audio and complete text. Use the same
+    # article for listening and reading so the two modules stay date-synced.
+    reading = {**listening, "audio_url": ""}
     life_flat = life["paragraphs"]
     listening_flat = flatten_sections(listening["sections"])
     reading_flat = flatten_sections(reading["sections"])
