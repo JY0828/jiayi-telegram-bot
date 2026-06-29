@@ -20,6 +20,7 @@ import generate_deutsch_reactivation_email as base
 
 DEFAULT_PAGE_BASE = "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs"
 DW_SLOW_NEWS_URL = "https://learngerman.dw.com/de/langsam-gesprochene-nachrichten/s-60040332"
+DW_TOPTHEMA_FEED = "https://rss.dw.com/xml/dkpodcast_topthemamitvokabeln_de"
 NACHRICHTENLEICHT_FEED = "https://www.deutschlandfunk.de/podcast-nachrichtenleicht-der-wochenrueckblick-in-einfacher-sprache-100.xml"
 LIFE_DIALOGUE_CANDIDATES = (
     {
@@ -261,6 +262,17 @@ def html_to_sections(fragment: str) -> list[dict]:
     return [s for s in sections if s["heading"] or s["paragraphs"]]
 
 
+def manuscript_to_paragraphs(fragment: str) -> list[str]:
+    fragment = re.sub(r"(?i)<br\s*/?>", "</p><p>", fragment)
+    paragraphs = html_to_paragraphs(fragment)
+    cleaned: list[str] = []
+    for paragraph in paragraphs:
+        paragraph = re.sub(r"^\s*[\wÄÖÜäöüß -]+?\s+–\s+", "", paragraph).strip()
+        if paragraph and paragraph not in cleaned:
+            cleaned.append(paragraph)
+    return cleaned
+
+
 def article_text_length(sections: list[dict]) -> int:
     return sum(len(p) for section in sections for p in section["paragraphs"])
 
@@ -294,6 +306,27 @@ def dw_article_from_url(url: str) -> dict | None:
         "url": absolute_url(article.get("namedUrl") or url, "https://learngerman.dw.com"),
         "sections": sections,
         "audio_url": mp3,
+    }
+
+
+def dw_lesson_from_url(url: str) -> dict | None:
+    raw, error = fetch_raw(url)
+    if error:
+        return None
+    state = apollo_state(raw)
+    lessons = [v for v in state.values() if isinstance(v, dict) and v.get("__typename") == "Lesson"]
+    lesson = max(lessons, key=lambda item: len(item.get("manuscript") or ""), default=None)
+    if not lesson or not lesson.get("manuscript"):
+        return None
+    paragraphs = manuscript_to_paragraphs(lesson["manuscript"])
+    if len(paragraphs) < 4:
+        return None
+    return {
+        "source": "DW Top-Thema mit Vokabeln",
+        "title": lesson.get("name") or "DW Top-Thema",
+        "url": absolute_url(lesson.get("canonicalUrl") or lesson.get("namedUrl") or url, "https://learngerman.dw.com"),
+        "sections": [{"heading": lesson.get("name") or "DW Top-Thema", "paragraphs": paragraphs}],
+        "audio_url": "",
     }
 
 
@@ -372,6 +405,22 @@ def nachrichtenleicht_candidates(limit: int = 8) -> list[str]:
     return urls
 
 
+def dw_topthema_candidates(limit: int = 8) -> list[str]:
+    try:
+        import xml.etree.ElementTree as ET
+
+        raw = base.fetch_text(DW_TOPTHEMA_FEED)
+        root = ET.fromstring(raw)
+    except Exception:
+        return []
+    urls: list[str] = []
+    for item in root.findall(".//item")[:limit]:
+        link = item.findtext("link") or ""
+        if link and link not in urls:
+            urls.append(link)
+    return urls
+
+
 def deutschlandfunk_teaser_article(url: str) -> dict | None:
     raw, error = fetch_raw(url)
     if error:
@@ -399,6 +448,20 @@ def choose_reading_article(
         and quality_ok(preferred["sections"], 500)
     ):
         return {**preferred, "audio_url": ""}
+    for url in dw_topthema_candidates():
+        if skip_url and url == skip_url:
+            continue
+        if url.casefold() in recent_news:
+            continue
+        article = dw_lesson_from_url(url)
+        if article and quality_ok(article["sections"], 500):
+            return article
+    for url in dw_topthema_candidates():
+        if skip_url and url == skip_url:
+            continue
+        article = dw_lesson_from_url(url)
+        if article and quality_ok(article["sections"], 500):
+            return article
     # Nachrichtenleicht is intentionally probed but not accepted here yet: the current
     # pages often mix teaser text with Deutschlandfunk navigation/topic blocks. That is
     # worse than switching sources, so use the full-text DW fallback.
@@ -1635,9 +1698,7 @@ def build_daily_v5(sequence: int, today, history: list[dict], mode: str, page_ba
 
     life = choose_life_article(history)
     listening = choose_dw_slow_news(300, require_audio=True, history=history, history_keys=("listening_link",))
-    # DW slow news gives us both complete audio and complete text. Use the same
-    # article for listening and reading so the two modules stay date-synced.
-    reading = {**listening, "audio_url": ""}
+    reading = choose_reading_article(preferred=None, skip_url=listening["url"], history=history)
     life_flat = life["paragraphs"]
     listening_flat = flatten_sections(listening["sections"])
     reading_flat = flatten_sections(reading["sections"])
