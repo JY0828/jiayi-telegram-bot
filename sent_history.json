@@ -318,5 +318,25 @@
     "page_path": "outputs/deutsch-pages/2026-07-01.html",
     "expressions": [],
     "version": "v5"
+  },
+  {
+    "sequence": 17,
+    "date": "2026-07-02",
+    "mode": "daily",
+    "topic": "Supermarkt: nach Produkten fragen",
+    "life_topic": "在超市询问商品位置和付款问题",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/at-the-supermarket/page-2394",
+    "life_slice_start": 0,
+    "news_title": "Kinder auf der Flucht",
+    "news_link": "https://learngerman.dw.com/de/kinder-auf-der-flucht/l-77767841",
+    "listening_title": "01.07.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/01072026-langsam-gesprochene-nachrichten/a-77780661",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-07-02.html",
+    "page_path": "outputs/deutsch-pages/2026-07-02.html",
+    "expressions": [
+      "Nach Angaben"
+    ],
+    "version": "v5"
   }
 ]
