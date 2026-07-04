@@ -356,5 +356,25 @@
     "page_path": "outputs/deutsch-pages/2026-07-03.html",
     "expressions": [],
     "version": "v5"
+  },
+  {
+    "sequence": 19,
+    "date": "2026-07-04",
+    "mode": "saturday",
+    "topic": "ÖPNV: Ticket und Verbindung klären",
+    "life_topic": "乘坐公交地铁时询问车票和换乘",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/using-public-transport/page-1764",
+    "life_slice_start": 0,
+    "news_title": "Kinder auf der Flucht",
+    "news_link": "https://learngerman.dw.com/de/kinder-auf-der-flucht/l-77767841",
+    "listening_title": "03.07.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/03072026-langsam-gesprochene-nachrichten/a-77815034",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-07-04.html",
+    "page_path": "outputs/deutsch-pages/2026-07-04.html",
+    "expressions": [
+      "nach Angaben"
+    ],
+    "version": "v5"
   }
 ]
