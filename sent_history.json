@@ -396,5 +396,25 @@
       "Nach Angaben"
     ],
     "version": "v5"
+  },
+  {
+    "sequence": 21,
+    "date": "2026-07-06",
+    "mode": "daily",
+    "topic": "Bahnhof: Zugausfall und Verspätung",
+    "life_topic": "在火车站询问晚点、站台和换乘",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/at-the-train-station/page-1759",
+    "life_slice_start": 0,
+    "news_title": "Kinder auf der Flucht",
+    "news_link": "https://learngerman.dw.com/de/kinder-auf-der-flucht/l-77767841",
+    "listening_title": "04.07.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/04072026-langsam-gesprochene-nachrichten/a-77832097",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-07-06.html",
+    "page_path": "outputs/deutsch-pages/2026-07-06.html",
+    "expressions": [
+      "Nach Angaben"
+    ],
+    "version": "v5"
   }
 ]
