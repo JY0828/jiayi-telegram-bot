@@ -456,5 +456,25 @@
       "Nach Angaben"
     ],
     "version": "v5"
+  },
+  {
+    "sequence": 24,
+    "date": "2026-07-09",
+    "mode": "daily",
+    "topic": "Telefon: jemanden erreichen oder Rückruf erbitten",
+    "life_topic": "电话里找人、留言并请求回电",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/business/telephoning/page-1797",
+    "life_slice_start": 0,
+    "news_title": "„Du bist gut genug“: ein Song geht viral",
+    "news_link": "https://learngerman.dw.com/de/du-bist-gut-genug-ein-song-geht-viral/l-77861977",
+    "listening_title": "08.07.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/08072026-langsam-gesprochene-nachrichten/a-77873869",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-07-09.html",
+    "page_path": "outputs/deutsch-pages/2026-07-09.html",
+    "expressions": [
+      "Nach Angaben"
+    ],
+    "version": "v5"
   }
 ]
