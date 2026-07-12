@@ -517,5 +517,23 @@
       "nach Angaben"
     ],
     "version": "v5"
+  },
+  {
+    "sequence": 27,
+    "date": "2026-07-12",
+    "mode": "sunday",
+    "topic": "Supermarkt: nach Produkten fragen",
+    "life_topic": "在超市询问商品位置和付款问题",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/at-the-supermarket/page-2394",
+    "life_slice_start": 0,
+    "news_title": "„Du bist gut genug“: ein Song geht viral",
+    "news_link": "https://learngerman.dw.com/de/du-bist-gut-genug-ein-song-geht-viral/l-77861977",
+    "listening_title": "11.07.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/11072026-langsam-gesprochene-nachrichten/a-77915833",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-07-12.html",
+    "page_path": "outputs/deutsch-pages/2026-07-12.html",
+    "expressions": [],
+    "version": "v5"
   }
 ]
