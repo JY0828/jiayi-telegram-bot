@@ -589,5 +589,23 @@
     "page_path": "outputs/deutsch-pages/2026-07-15.html",
     "expressions": [],
     "version": "v5"
+  },
+  {
+    "sequence": 31,
+    "date": "2026-07-16",
+    "mode": "daily",
+    "topic": "Bahnhof: Zugausfall und Verspätung",
+    "life_topic": "在火车站询问晚点、站台和换乘",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/at-the-train-station/page-1759",
+    "life_slice_start": 0,
+    "news_title": "Kampf gegen rechts – mit dem Markenrecht",
+    "news_link": "https://learngerman.dw.com/de/kampf-gegen-rechts-mit-dem-markenrecht/l-77949684",
+    "listening_title": "15.07.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/15072026-langsam-gesprochene-nachrichten/a-77962315",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-07-16.html",
+    "page_path": "outputs/deutsch-pages/2026-07-16.html",
+    "expressions": [],
+    "version": "v5"
   }
 ]
