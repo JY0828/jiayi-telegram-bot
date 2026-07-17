@@ -607,5 +607,25 @@
     "page_path": "outputs/deutsch-pages/2026-07-16.html",
     "expressions": [],
     "version": "v5"
+  },
+  {
+    "sequence": 32,
+    "date": "2026-07-17",
+    "mode": "daily",
+    "topic": "Taxi: Ziel und Preis klären",
+    "life_topic": "坐出租车时说明目的地和询问费用",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/taking-a-taxi/page-1763",
+    "life_slice_start": 0,
+    "news_title": "Kampf gegen rechts – mit dem Markenrecht",
+    "news_link": "https://learngerman.dw.com/de/kampf-gegen-rechts-mit-dem-markenrecht/l-77949684",
+    "listening_title": "16.07.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/16072026-langsam-gesprochene-nachrichten/a-77978878",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-07-17.html",
+    "page_path": "outputs/deutsch-pages/2026-07-17.html",
+    "expressions": [
+      "Nach Angaben"
+    ],
+    "version": "v5"
   }
 ]
