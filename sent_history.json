@@ -701,5 +701,27 @@
     "page_path": "outputs/deutsch-pages/2026-07-21.html",
     "expressions": [],
     "version": "v5"
+  },
+  {
+    "sequence": 37,
+    "date": "2026-07-22",
+    "mode": "daily",
+    "topic": "Supermarkt: nach Produkten fragen",
+    "life_topic": "在超市询问商品位置和付款问题",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/at-the-supermarket/page-2394",
+    "life_slice_start": 0,
+    "news_title": "Kampf gegen rechts – mit dem Markenrecht",
+    "news_link": "https://learngerman.dw.com/de/kampf-gegen-rechts-mit-dem-markenrecht/l-77949684",
+    "listening_title": "21.07.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/21072026-langsam-gesprochene-nachrichten/a-78046398",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-07-22.html",
+    "page_path": "outputs/deutsch-pages/2026-07-22.html",
+    "expressions": [
+      "Die USA verschärfen",
+      "in Kraft treten",
+      "Nach Angaben"
+    ],
+    "version": "v5"
   }
 ]
