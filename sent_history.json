@@ -723,5 +723,25 @@
       "Nach Angaben"
     ],
     "version": "v5"
+  },
+  {
+    "sequence": 38,
+    "date": "2026-07-23",
+    "mode": "daily",
+    "topic": "Restaurant: reservieren und bestellen",
+    "life_topic": "在餐厅确认预约、点餐和提出小请求",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/leisure-time/at-the-restaurant/page-2390",
+    "life_slice_start": 0,
+    "news_title": "Kampf gegen rechts – mit dem Markenrecht",
+    "news_link": "https://learngerman.dw.com/de/kampf-gegen-rechts-mit-dem-markenrecht/l-77949684",
+    "listening_title": "22.07.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/22072026-langsam-gesprochene-nachrichten/a-78062198",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-07-23.html",
+    "page_path": "outputs/deutsch-pages/2026-07-23.html",
+    "expressions": [
+      "in Kraft treten"
+    ],
+    "version": "v5"
   }
 ]
