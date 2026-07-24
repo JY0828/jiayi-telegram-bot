@@ -743,5 +743,23 @@
       "in Kraft treten"
     ],
     "version": "v5"
+  },
+  {
+    "sequence": 39,
+    "date": "2026-07-24",
+    "mode": "daily",
+    "topic": "ÖPNV: Ticket und Verbindung klären",
+    "life_topic": "乘坐公交地铁时询问车票和换乘",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/using-public-transport/page-1764",
+    "life_slice_start": 0,
+    "news_title": "Kampf gegen rechts – mit dem Markenrecht",
+    "news_link": "https://learngerman.dw.com/de/kampf-gegen-rechts-mit-dem-markenrecht/l-77949684",
+    "listening_title": "23.07.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/23072026-langsam-gesprochene-nachrichten/a-78080186",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-07-24.html",
+    "page_path": "outputs/deutsch-pages/2026-07-24.html",
+    "expressions": [],
+    "version": "v5"
   }
 ]
