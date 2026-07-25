@@ -761,5 +761,26 @@
     "page_path": "outputs/deutsch-pages/2026-07-24.html",
     "expressions": [],
     "version": "v5"
+  },
+  {
+    "sequence": 40,
+    "date": "2026-07-25",
+    "mode": "saturday",
+    "topic": "Wohnung: Besichtigung und Rückfragen",
+    "life_topic": "看房时询问租金、Nebenkosten 和入住时间",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/renting-an-apartment/page-1762",
+    "life_slice_start": 0,
+    "news_title": "Darum gibt es Massentourismus",
+    "news_link": "https://learngerman.dw.com/de/darum-gibt-es-massentourismus/l-78084081",
+    "listening_title": "24.07.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/24072026-langsam-gesprochene-nachrichten/a-78095311",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-07-25.html",
+    "page_path": "outputs/deutsch-pages/2026-07-25.html",
+    "expressions": [
+      "in Kraft treten",
+      "die Handelsschifffahrt zu verringern"
+    ],
+    "version": "v5"
   }
 ]
