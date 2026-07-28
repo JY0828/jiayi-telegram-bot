@@ -822,5 +822,23 @@
       "Nach Angaben"
     ],
     "version": "v5"
+  },
+  {
+    "sequence": 43,
+    "date": "2026-07-28",
+    "mode": "daily",
+    "topic": "Friseur: Termin und Wunsch erklären",
+    "life_topic": "理发时说明想怎么剪、是否预约",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/at-the-hairdressers/page-1757",
+    "life_slice_start": 0,
+    "news_title": "Darum gibt es Massentourismus",
+    "news_link": "https://learngerman.dw.com/de/darum-gibt-es-massentourismus/l-78084081",
+    "listening_title": "27.07.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/27072026-langsam-gesprochene-nachrichten/a-78127264",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-07-28.html",
+    "page_path": "outputs/deutsch-pages/2026-07-28.html",
+    "expressions": [],
+    "version": "v5"
   }
 ]
