@@ -840,5 +840,23 @@
     "page_path": "outputs/deutsch-pages/2026-07-28.html",
     "expressions": [],
     "version": "v5"
+  },
+  {
+    "sequence": 44,
+    "date": "2026-07-29",
+    "mode": "daily",
+    "topic": "Telefon: jemanden erreichen oder Rückruf erbitten",
+    "life_topic": "电话里找人、留言并请求回电",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/business/telephoning/page-1797",
+    "life_slice_start": 0,
+    "news_title": "Diskussionen um Leihmutterschaft",
+    "news_link": "https://learngerman.dw.com/de/diskussionen-um-leihmutterschaft/l-78140420",
+    "listening_title": "28.07.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/28072026-langsam-gesprochene-nachrichten/a-78139440",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-07-29.html",
+    "page_path": "outputs/deutsch-pages/2026-07-29.html",
+    "expressions": [],
+    "version": "v5"
   }
 ]
