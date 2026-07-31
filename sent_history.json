@@ -878,5 +878,25 @@
       "nach Angaben"
     ],
     "version": "v5"
+  },
+  {
+    "sequence": 46,
+    "date": "2026-07-31",
+    "mode": "daily",
+    "topic": "Zahnarztpraxis: Schmerzen schildern",
+    "life_topic": "在牙医前台/问诊时说明疼痛情况",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/a-dentist-appointment/page-1755",
+    "life_slice_start": 0,
+    "news_title": "Diskussionen um Leihmutterschaft",
+    "news_link": "https://learngerman.dw.com/de/diskussionen-um-leihmutterschaft/l-78140420",
+    "listening_title": "30.07.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/30072026-langsam-gesprochene-nachrichten/a-78168743",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-07-31.html",
+    "page_path": "outputs/deutsch-pages/2026-07-31.html",
+    "expressions": [
+      "Nach Angaben"
+    ],
+    "version": "v5"
   }
 ]
