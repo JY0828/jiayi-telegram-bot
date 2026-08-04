@@ -958,5 +958,25 @@
       "ein Rahmenabkommen unterzeichnen"
     ],
     "version": "v5"
+  },
+  {
+    "sequence": 50,
+    "date": "2026-08-04",
+    "mode": "daily",
+    "topic": "Wohnung: Besichtigung und Rückfragen",
+    "life_topic": "看房时询问租金、Nebenkosten 和入住时间",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/renting-an-apartment/page-1762",
+    "life_slice_start": 0,
+    "news_title": "Diskussionen um Leihmutterschaft",
+    "news_link": "https://learngerman.dw.com/de/diskussionen-um-leihmutterschaft/l-78140420",
+    "listening_title": "03.08.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/03082026-langsam-gesprochene-nachrichten/a-78211804",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-08-04.html",
+    "page_path": "outputs/deutsch-pages/2026-08-04.html",
+    "expressions": [
+      "Nach Angaben"
+    ],
+    "version": "v5"
   }
 ]
