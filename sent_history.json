@@ -998,5 +998,25 @@
       "Nach Angaben"
     ],
     "version": "v5"
+  },
+  {
+    "sequence": 52,
+    "date": "2026-08-06",
+    "mode": "daily",
+    "topic": "Taxi: Ziel und Preis klären",
+    "life_topic": "坐出租车时说明目的地和询问费用",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/taking-a-taxi/page-1763",
+    "life_slice_start": 0,
+    "news_title": "Nach CSD-Anschlag: Experten warnen vor Extremismus",
+    "news_link": "https://learngerman.dw.com/de/nach-csd-anschlag-experten-warnen-vor-extremismus/l-78231439",
+    "listening_title": "05.08.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/05082026-langsam-gesprochene-nachrichten/a-78241639",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-08-06.html",
+    "page_path": "outputs/deutsch-pages/2026-08-06.html",
+    "expressions": [
+      "zur Verfügung stellen"
+    ],
+    "version": "v5"
   }
 ]
