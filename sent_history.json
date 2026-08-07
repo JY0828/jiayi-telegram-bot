@@ -1018,5 +1018,23 @@
       "zur Verfügung stellen"
     ],
     "version": "v5"
+  },
+  {
+    "sequence": 53,
+    "date": "2026-08-07",
+    "mode": "daily",
+    "topic": "Friseur: Termin und Wunsch erklären",
+    "life_topic": "理发时说明想怎么剪、是否预约",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/at-the-hairdressers/page-1757",
+    "life_slice_start": 0,
+    "news_title": "Nach CSD-Anschlag: Experten warnen vor Extremismus",
+    "news_link": "https://learngerman.dw.com/de/nach-csd-anschlag-experten-warnen-vor-extremismus/l-78231439",
+    "listening_title": "06.08.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/06082026-langsam-gesprochene-nachrichten/a-78260643",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-08-07.html",
+    "page_path": "outputs/deutsch-pages/2026-08-07.html",
+    "expressions": [],
+    "version": "v5"
   }
 ]
