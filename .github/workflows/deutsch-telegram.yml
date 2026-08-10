@@ -17,11 +17,6 @@ on:
   push:
     paths:
       - .github/deutsch-telegram-test.trigger
-  schedule:
-    # Avoid the top-of-hour Actions rush. The job gates on the Berlin 07:00-13:59 window below.
-    # GitHub scheduled runs can be delayed or missed, so the wider window lets the first
-    # successful daytime run send once while sent_history.json prevents duplicates.
-    - cron: "17,32,47 * * * *"
 
 permissions:
   contents: write
