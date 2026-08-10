@@ -1072,5 +1072,23 @@
     "page_path": "outputs/deutsch-pages/2026-08-09.html",
     "expressions": [],
     "version": "v5"
+  },
+  {
+    "sequence": 56,
+    "date": "2026-08-10",
+    "mode": "daily",
+    "topic": "Zahnarztpraxis: Schmerzen schildern",
+    "life_topic": "在牙医前台/问诊时说明疼痛情况",
+    "life_source": "lingoneo",
+    "life_url": "https://www.lingoneo.org/learn-german/page/learn-essential-phrases/daily-life/a-dentist-appointment/page-1755",
+    "life_slice_start": 0,
+    "news_title": "Der Handel mit afrikanischen Ameisen",
+    "news_link": "https://learngerman.dw.com/de/der-handel-mit-afrikanischen-ameisen/l-78265387",
+    "listening_title": "08.08.2026 – Langsam Gesprochene Nachrichten",
+    "listening_link": "https://learngerman.dw.com/de/08082026-langsam-gesprochene-nachrichten/a-78288696",
+    "page_url": "https://htmlpreview.github.io/?https://github.com/JY0828/jiayi-telegram-bot/blob/main/outputs/deutsch-pages/2026-08-10.html",
+    "page_path": "outputs/deutsch-pages/2026-08-10.html",
+    "expressions": [],
+    "version": "v5"
   }
 ]
